@@ -6,47 +6,65 @@ const hostname = '127.0.0.1';
 const port = 3000;
 
 const sqlConnection = mysql.createConnection({
-	host      : 'localhost',
-	user      : 'root',
-	password  : 'pass',
-	database  : 'blips'
+    host      : 'localhost',
+    user      : 'root',
+    password  : 'pass',
+    database  : 'blips'
 });
 
 const server = http.createServer((req, res) => 
 {
-	res.statusCode = 200;
-	res.setHeader('Content-Type', 'text/plain');
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
 
-	sqlConnection.connect();
-	
-	if (req.method == 'POST') 
-	{
-		console.log('POST');
+    sqlConnection.connect(function(err) {
+        if (err) {
+            console.error('Error connecting: ' + err.stack);
+            return;
+        }
 
-		var response = 'none';
+        console.log('Connected as ID ' + sqlConnection.threadID);
+    });
 
-        sqlConnection.query('select * from Cities', function (error, results, fields) {
-        	if (error) throw error;
-        	console.log('First city is ', results[0].NAME);
-        	response = results[0].NAME;
+    if (req.method == 'POST') 
+    {
+        console.log('POST');
+
+        var body = '';
+
+        req.on('data', function (data)
+        {
+            body += data;
+            console.log('Partial body: ' + data);
         });
 
-        sqlConnection.end();
+        req.on('end', function ()
+        {
+            var queryStr = 'select * from Cities where ID  = ' + sqlConnection.escape(body);
 
-		res.writeHead(200, {'Content-Type': 'text/html'});
-		res.end('post received ' + response);
-	}
-	else
-	{
-		console.log('GET');
-		sqlConnection.end();
-		//var html = fs.readFileSync('index.html');
-		res.writeHead(200, {'Content-Type': 'text/html'});
-		res.end('get received');
-	}
+            sqlConnection.query(queryStr, function (error, results, fields)
+            {
+                if (error) throw error;
+                console.log('First city is ' + results[0].NAME);
+
+                sqlConnection.end();
+
+                res.writeHead(200, {'Content-Type': 'text/html'});
+                res.end('post received city' + results[0].NAME + ' province ' + results[0].Province + ' country ' + results[0].Country);
+            });
+        });
+    }
+    else
+    {
+        console.log('GET');
+        sqlConnection.end();
+        //var html = fs.readFileSync('index.html');
+        res.writeHead(200, {'Content-Type': 'text/html'});
+        res.end('get received');
+    }
 });
 
 server.listen(port, hostname, () => 
 {
-	console.log('Server running at http://' + hostname + ':' + port + '/');
+    console.log('Server running at http://' + hostname + ':' + port + '/');
 });
