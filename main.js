@@ -12,19 +12,19 @@ const sqlConnection = mysql.createConnection({
     database  : 'blips'
 });
 
+sqlConnection.connect(function(err) {
+    if (err) {
+        console.error('Error connecting: ' + err.stack);
+        return;
+    }
+
+    console.log('Connected as ID ' + sqlConnection.threadID);
+});
+
 const server = http.createServer((req, res) => 
 {
     res.statusCode = 200;
     res.setHeader('Content-Type', 'text/plain');
-
-    sqlConnection.connect(function(err) {
-        if (err) {
-            console.error('Error connecting: ' + err.stack);
-            return;
-        }
-
-        console.log('Connected as ID ' + sqlConnection.threadID);
-    });
 
     if (req.method == 'POST') 
     {
@@ -46,8 +46,6 @@ const server = http.createServer((req, res) =>
             {
                 if (error) throw error;
                 console.log('First city is ' + results[0].NAME);
-
-                sqlConnection.end();
 
                 res.writeHead(200, {'Content-Type': 'text/html'});
                 res.end('post received city' + results[0].NAME + ' province ' + results[0].Province + ' country ' + results[0].Country);
