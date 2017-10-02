@@ -16,18 +16,17 @@ def us_cities():
 		encoding = site.headers.get_content_charset('utf-8')
 		decoded_html = html_response.decode(encoding)
 
+		# List of tuples to add to DB
 		db_entries = []
 
+		# String splitting constants
 		city_line_number = 1
-		city_rsplit_number = 2
-
 		state_line_number = 2
 		state_rsplit_number = 4
 
 		# Split on first occurence of "<td>1</td>", this is where the
 		# the list of cities begins
 		pop_table = decoded_html.split("<td>1</td>", 1)[1]
-
 
 		# Split on end of HTML table, this is where the list of cities ends
 		pop_table = pop_table.split("</table>")[0]
@@ -43,11 +42,34 @@ def us_cities():
 			city = lines[city_line_number]
 			state = lines[state_line_number]
 
-			city = city.split("</a>")[0]
-			city = city.rsplit(">")[city_rsplit_number]
+			if "<b>" not in city:
+				city = city.split("</a>")[0]
+				city = city.rsplit(">")[city.count(">")]
 
-			state = state.split("</td>")[0]
-			state = state.rsplit(">")[state_rsplit_number]
+				if "title" in city:
+					city = city.split("title=\"")[1]
+					city = city.split("\"")[0]
+			else:
+				city = city.split("title=\"")[1]
+
+				if "," in city:
+					city = city.split(",")[0]
+				else:
+					city = city.split("\"")[0]
+
+			# </small> handling is required for DC, which has a different tag ordering
+			if "</small>" in state:
+				state = state.split("</a>")[0]
+				state = state.split(">")[state.count(">")]
+			else:
+				state = state.split("</td>")[0]
+				state = state.rsplit(">")[state_rsplit_number]
+
+			# Splitting on </a> and > sometimes doesn't work, fallback to splitting on
+			# "title="
+			if "title" in state:
+				state = state.split("title=\"")[1]
+				state = state.split("\"")[0]
 
 			entry = city, state, "United States"
 			db_entries.append(entry)
