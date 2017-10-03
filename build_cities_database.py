@@ -7,11 +7,23 @@
 from urllib.request import urlopen
 import re
 
+# https://github.com/PyMySQL
+import pymysql
+
 us_wiki_url = "https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population"
 canada_wiki_url = "https://en.wikipedia.org/wiki/List_of_the_100_largest_municipalities_in_Canada_by_population"
+db_address = "localhost"
+db_port = 3306
+db_user = "root"
+db_pass = "pass"
+db = "blips"
 
 # List of tuples to add to DB
 db_entries = []
+db_states_added = set()
+
+db_country_indicies = dict()
+db_state_indicies = dict()
 
 # Get number cities in given Wiki page
 def get_num_cities(contents, index_tag_begin, index_tag_end):
@@ -56,7 +68,7 @@ def state_split(state_line, index_tag_end):
 		state_line = state_line.split(">")[state_line.count(">")]
 	else:
 		state_line = state_line.split(index_tag_end)[0]
-		state_line = state_line.rsplit(">")[state_line_rsplit_number]
+		state_line = state_line.rsplit(">")[state_rsplit_number]
 
 	# Splitting on </a> and > sometimes doesn't work, fallback to splitting on "title="
 	if "title" in state_line:
@@ -104,20 +116,73 @@ def parse_cities(wiki_url, index_tag_begin, index_tag_end, city_line_number, sta
 			if len(pop_table) > 1:
 				pop_table = pop_table[1]
 
-		# TEMP - Remove when DB insertion is implemented
-		for entry in db_entries:
-			print(entry[0] + ", " + entry[1] + ", " + entry[2])
-
 # Parse US cities
 def us_cities():
+	db_insert_country("United States")
 	parse_cities(us_wiki_url, "<td>", "</td>", 1, 2, "United States")
 
 # Parse Canadian cities
 def canada_cities():
+	db_insert_country("Canada")
 	parse_cities(canada_wiki_url, "<center>", "</center>", 2, 3, "Canada")
+
+# Insert a specific Country into the DB, maintains dictionary of Country Name to ID assigned in DB
+def db_insert_country(country):
+	conn = pymysql.connect(host=db_address, port=db_port, user=db_user, passwd=db_pass, db=db)
+	cursor = conn.cursor()
+
+	conn.begin()
+
+	cursor.execute("insert into Country values (NULL, \"" + country + "\");")
+
+	conn.commit()
+
+	cursor.execute("select * from Country")
+
+	for row in cursor:
+		db_country_indicies[row[1]] = row[0]
+
+	cursor.close()
+	conn.close()
+
+# Insert all Cities and States/Provinces to DB, called after all City and State names have been
+# created from Wiki pages. Ensures that no redundant DB queries are performed.
+def db_insert_cities():
+	conn = pymysql.connect(host=db_address, port=db_port, user=db_user, passwd=db_pass, db=db)
+	conn.set_charset('utf8')
+	cursor = conn.cursor()
+
+	conn.begin()
+
+	cursor.execute('SET NAMES utf8;')
+	cursor.execute('SET CHARACTER SET utf8;')
+	cursor.execute('SET character_set_connection=utf8;')
+
+	for entry in db_entries:
+		if entry[1] not in db_states_added:
+			cursor.execute("insert into Province values (NULL, \"" + entry[1] + "\", " + str(db_country_indicies[entry[2]]) + ");")
+			db_states_added.add(entry[1])
+
+			conn.commit()
+
+			cursor.execute("select * from Province where Name = \"" + entry[1] + "\";")
+
+			# Should only get one entry
+			for row in cursor:
+				db_state_indicies[entry[1]] = row[0]
+
+			conn.begin()
+
+		cursor.execute("insert into City values (NULL, \"" + entry[0] + "\", " + str(db_state_indicies[entry[1]]) + ", " + str(db_country_indicies[entry[2]]) + ");")
+
+	conn.commit()
+
+	cursor.close()
+	conn.close()
 
 def main():
 	us_cities()
 	canada_cities()
+	db_insert_cities()
 
 main()
