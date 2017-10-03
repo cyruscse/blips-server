@@ -1,7 +1,6 @@
 # Blips City/Province/Country DB Builder
 # (uses PyMySQL to open a cursor into DB, table_definitions.sql needs to have been run first)
-# Get list of cities with a population > 100 000
-# and build the MySQL database
+# Get list of cities with greatest population in a few countries
 #
 # Data is gathered from Wikipedia pages for U.S. and Canada (for now)
 
@@ -14,6 +13,7 @@ canada_wiki_url = "https://en.wikipedia.org/wiki/List_of_the_100_largest_municip
 # List of tuples to add to DB
 db_entries = []
 
+# Get number cities in given Wiki page
 def get_num_cities(contents, index_tag_begin, index_tag_end):
 	pop_table = contents.split(index_tag_begin + "1" + index_tag_end, 1)[1]
 	pop_table = pop_table.split("</table>")[0]
@@ -22,6 +22,50 @@ def get_num_cities(contents, index_tag_begin, index_tag_end):
 
 	return int(re.search(r'\d+', last_element).group())
 
+# Given line of HTML corresponding to City name, split string
+# to get and return City name
+def city_split(city_line):
+	if "<b>" not in city_line:
+		city_line = city_line.split("</a>")[0]
+		city_line = city_line.rsplit(">")[city_line.count(">")]
+
+		if "title" in city_line:
+			city_line = city_line.split("title=\"")[1]
+			city_line = city_line.split("\"")[0]
+
+	# Some city names are bolded (i.e. on the US page), requiring special handling
+	else:
+		city_line = city_line.split("title=\"")[1]
+
+		if "," in city_line:
+			city_line = city_line.split(",")[0]
+		else:
+			city_line = city_line.split("\"")[0]
+
+	return city_line
+
+# Given line of HTML corresponding to State name, split string
+# to get and return State name
+def state_split(state_line, index_tag_end):
+	# String splitting constant
+	state_rsplit_number = 4
+
+	# Special handling for </small> and states that don't contain index_tag_end
+	if "</small>" in state_line or index_tag_end not in state_line:
+		state_line = state_line.split("</a>")[0]
+		state_line = state_line.split(">")[state_line.count(">")]
+	else:
+		state_line = state_line.split(index_tag_end)[0]
+		state_line = state_line.rsplit(">")[state_line_rsplit_number]
+
+	# Splitting on </a> and > sometimes doesn't work, fallback to splitting on "title="
+	if "title" in state_line:
+		state_line = state_line.split("title=\"")[1]
+		state_line = state_line.split("\"")[0]
+
+	return state_line
+
+# Creates tuples containing City, State, and Country. Tuples are then appended to a list to be inserted into the DB
 def parse_cities(wiki_url, index_tag_begin, index_tag_end, city_line_number, state_line_number, country):
 	with urlopen(wiki_url) as site:
 		# Decode response using UTF-8
@@ -30,9 +74,6 @@ def parse_cities(wiki_url, index_tag_begin, index_tag_end, city_line_number, sta
 		decoded_html = html_response.decode(encoding)
 
 		num_cities = get_num_cities(decoded_html, index_tag_begin, index_tag_end)
-
-		# String splitting constants
-		state_rsplit_number = 4
 
 		# Split on first occurence of "<td>1</td>", this is where the
 		# the list of cities begins
@@ -43,6 +84,7 @@ def parse_cities(wiki_url, index_tag_begin, index_tag_end, city_line_number, sta
 
 		pop_index = 1
 
+		# Loop over each line of filtered HTML (containing only Cities and States/Provinces)
 		while pop_index <= num_cities:
 			pop_index = pop_index + 1
 			pop_table = pop_table.split(index_tag_begin + str(pop_index) + index_tag_end)
@@ -51,47 +93,26 @@ def parse_cities(wiki_url, index_tag_begin, index_tag_end, city_line_number, sta
 			city = lines[city_line_number]
 			state = lines[state_line_number]
 
-			if "<b>" not in city:
-				city = city.split("</a>")[0]
-				city = city.rsplit(">")[city.count(">")]
+			# Split City and State strings down to just the City and State name, respectively
+			city = city_split(city)
+			state = state_split(state, index_tag_end)
 
-				if "title" in city:
-					city = city.split("title=\"")[1]
-					city = city.split("\"")[0]
-			else:
-				city = city.split("title=\"")[1]
-
-				if "," in city:
-					city = city.split(",")[0]
-				else:
-					city = city.split("\"")[0]
-
-			# Special handling for </small> and states that don't contain index_tag_end
-			if "</small>" in state or index_tag_end not in state:
-				state = state.split("</a>")[0]
-				state = state.split(">")[state.count(">")]
-			else:
-				state = state.split(index_tag_end)[0]
-				state = state.rsplit(">")[state_rsplit_number]
-
-			# Splitting on </a> and > sometimes doesn't work, fallback to splitting on
-			# "title="
-			if "title" in state:
-				state = state.split("title=\"")[1]
-				state = state.split("\"")[0]
-
+			# Create tuple and append to list
 			entry = city, state, country
 			db_entries.append(entry)
 
 			if len(pop_table) > 1:
 				pop_table = pop_table[1]
 
+		# TEMP - Remove when DB insertion is implemented
 		for entry in db_entries:
 			print(entry[0] + ", " + entry[1] + ", " + entry[2])
 
+# Parse US cities
 def us_cities():
 	parse_cities(us_wiki_url, "<td>", "</td>", 1, 2, "United States")
 
+# Parse Canadian cities
 def canada_cities():
 	parse_cities(canada_wiki_url, "<center>", "</center>", 2, 3, "Canada")
 
