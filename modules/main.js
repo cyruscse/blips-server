@@ -1,27 +1,17 @@
 const http = require('http');
 const fs = require('fs');
-const mysql = require('mysql');
 
 const hostname = 'localhost';
 const port = 3000;
 
-var sqlConnection = mysql.createConnection({
-    host      : 'localhost',
-    user      : 'root',
-    password  : 'pass',
-    database  : 'blips'
-});
+// const places = require('./places.js'); - not yet implemented
+const googleClient = require('./google_client.js');
+const mysqlClient = require('./mysql_client.js');
 
-var googleMapsClient = require('@google/maps').createClient({
-    key       : 'AIzaSyB0oGuvJF0foOJxAwSj_pxlsLJdijmsoFw'
-});
+const mysqlConnection = mysqlClient(hostname, 'root', 'pass', 'blips');
+mysqlConnection.connect();
 
-sqlConnection.connect(function(err) {
-    if (err) {
-        console.error('Error connecting: ' + err.stack);
-        return;
-    }
-});
+const mapsApi = googleClient.googleMapsClient();
 
 const server = http.createServer((req, res) => 
 {
@@ -42,7 +32,7 @@ const server = http.createServer((req, res) =>
 
         req.on('end', function ()
         {
-            var geocodeTest = googleMapsClient.geocode({
+           /* var geocodeTest = googleMapsClient.geocode({
                 address:  '1125 Colonel By Drive, Ottawa, ON'
             }, function(err, response) {
                 if (!err) {
@@ -51,11 +41,11 @@ const server = http.createServer((req, res) =>
                 else {
                     console.log(err);
                 }
-            });
+            }); */
 
-            var queryStr = 'select * from City where ID  = ' + sqlConnection.escape(body);
+            var queryStr = 'select * from City where ID  = ' + mysqlConnection.escape(body);
 
-            sqlConnection.query(queryStr, function (error, results, fields)
+            mysqlConnection.query(queryStr, function (error, results, fields)
             {
                 if (error) throw error;
                 console.log('First city is ' + results[0].Name);
