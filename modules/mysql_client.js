@@ -6,10 +6,3 @@ module.exports = (host, user, password, database) => mysql.createConnection({
     password  : password,
     database  : database
 });
-
-exports.connect = () => this.connect(function(err) {
-    if (err) {
-        console.error('Error connecting: ' + err.stack);
-        throw err;
-    }
-});

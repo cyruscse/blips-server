@@ -12,7 +12,14 @@ const mysqlClient = require('./mysql_client.js');
 const mysqlConnection = mysqlClient(hostname, 'root', 'pass', 'blips');
 mysqlConnection.connect();
 
-const mapsApi = googleClient.googleMapsClient();
+function getLocCallback(res, location) {
+    res.writeHead(200, {'Content-Type': 'text/html'});
+    res.end('post received: location lat ' + location.lat + ' lng ' + location.lng + '\n');
+}
+
+function geocodeCallback(res, response) {
+    googleClient.getLocation(response.json, res, getLocCallback);
+}
 
 const server = http.createServer((req, res) => 
 {
@@ -33,34 +40,36 @@ const server = http.createServer((req, res) =>
 
         req.on('end', function ()
         {
-            var geocodeTest = mapsApi.geocode({ address:  'Ottawa, ON' }).asPromise()
-                .then ((response) => {
-                    console.log(response.json.results[0]);
-                    var location = googleClient.getLocation(response.json);
+            var queryStr = "select * from City where ID = " + mysqlConnection.escape(body);
 
-                    var placesTest = mapsApi.placesNearby({ location: location, radius: 500, opennow: true, type: "lodging" }).asPromise()
-                        .then ((response) => {
-                            console.log(response.json)
-                        })
-                        .catch ((err) => {
-                            console.log(err)
-                        });
-                })
-                .catch ((err) => {
-                    console.log(err)
-                });
-
-            //var placesTest = mapsApi.placesNearby({ })
-
-            var queryStr = 'select * from City where ID  = ' + mysqlConnection.escape(body);
-
-            mysqlConnection.query(queryStr, function (error, results, fields)
+            mysqlConnection.query(queryStr, function (error, cityResults, fields)
             {
                 if (error) throw error;
-                console.log('First city is ' + results[0].Name);
+                console.log('City is ' + cityResults[0].Name);
 
-                res.writeHead(200, {'Content-Type': 'text/html'});
-                res.end('post received city' + results[0].Name + ' province ' + results[0].PID + ' country ' + results[0].CID + '\n');
+                //ugly nested queries, fix this...
+
+                queryStr = "select * from Province where ID = " + cityResults[0].PID;
+
+                mysqlConnection.query(queryStr, function (error, provinceResults, fields)
+                {
+                    if (error) throw error;
+                    console.log('Province is ' + provinceResults[0].Name);
+
+                    queryStr = "select * from Country where ID = " + cityResults[0].CID;
+
+                    mysqlConnection.query(queryStr, function (error, countryResults, fields)
+                    {
+                        if (error) throw error;
+                        console.log('Country is ' + countryResults[0].Name);
+
+                        var city = cityResults[0].Name;
+                        var province = provinceResults[0].Name;
+                        var country = countryResults[0].Name;
+
+                        googleClient.geocodeLocString(city.toString(), province.toString(), country.toString(), res, geocodeCallback);
+                    })
+                })
             });
         });
     }
