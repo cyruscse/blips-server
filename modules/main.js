@@ -32,7 +32,7 @@ const server = http.createServer((req, res) =>
 
         req.on('end', function ()
         {
-           /* var geocodeTest = googleMapsClient.geocode({
+            var geocodeTest = mapsApi.geocode({
                 address:  '1125 Colonel By Drive, Ottawa, ON'
             }, function(err, response) {
                 if (!err) {
@@ -41,7 +41,7 @@ const server = http.createServer((req, res) =>
                 else {
                     console.log(err);
                 }
-            }); */
+            });
 
             var queryStr = 'select * from City where ID  = ' + mysqlConnection.escape(body);
 
