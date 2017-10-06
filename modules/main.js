@@ -1,5 +1,6 @@
 const http = require('http');
 const fs = require('fs');
+const Promise = require('promise');
 
 const hostname = 'localhost';
 const port = 3000;
@@ -32,16 +33,24 @@ const server = http.createServer((req, res) =>
 
         req.on('end', function ()
         {
-            var geocodeTest = mapsApi.geocode({
-                address:  '1125 Colonel By Drive, Ottawa, ON'
-            }, function(err, response) {
-                if (!err) {
-                    console.log(response.json.results);
-                }
-                else {
-                    console.log(err);
-                }
-            });
+            var geocodeTest = mapsApi.geocode({ address:  'Ottawa, ON' }).asPromise()
+                .then ((response) => {
+                    console.log(response.json.results[0]);
+                    var location = googleClient.getLocation(response.json);
+
+                    var placesTest = mapsApi.placesNearby({ location: location, radius: 500, opennow: true, type: "lodging" }).asPromise()
+                        .then ((response) => {
+                            console.log(response.json)
+                        })
+                        .catch ((err) => {
+                            console.log(err)
+                        });
+                })
+                .catch ((err) => {
+                    console.log(err)
+                });
+
+            //var placesTest = mapsApi.placesNearby({ })
 
             var queryStr = 'select * from City where ID  = ' + mysqlConnection.escape(body);
 
