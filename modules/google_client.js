@@ -6,6 +6,24 @@ var mapsClient = maps.createClient({
     Promise   : Promise
 });
 
+exports.placesCallback = (httpResponse, places) => {
+    for (i = 0; i < places.json.results.length; i++) {
+        httpResponse.write(places.json.results[i].name + ", " + places.json.results[i].vicinity);
+        httpResponse.write('\n');
+    }
+
+    httpResponse.end('top ' + places.json.results.length + ' lodging attractions displayed\n');
+}
+
+exports.locationCallback = (httpResponse, location) => {
+    httpResponse.write('post received: location lat ' + location.lat + ' lng ' + location.lng + '\n');
+    googleClient.placesNearbyToLocation(location, httpResponse, placesCallback)
+}
+
+exports.geocodeCallback = (httpResponse, mapResponse) => {
+    googleClient.getLocation(mapResponse.json, httpResponse, locationCallback);
+}
+
 exports.getLocation = (json, httpResponse, callback) => {
 	if (json.status == "OK") {
 		callback(httpResponse, json.results[0].geometry.location);

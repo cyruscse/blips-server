@@ -180,9 +180,27 @@ def db_insert_cities():
 	cursor.close()
 	conn.close()
 
+# Initialize BlipsInfo table, keeps track of last modified time for each table
+def initialize_info_table():
+	conn = pymysql.connect(host=db_address, port=db_port, user=db_user, passwd=db_pass, db=db)
+	conn.set_charset('utf8')
+	cursor = conn.cursor()
+
+	conn.begin()
+
+	cursor.execute("insert into BlipsInfo values (\"Country\", (now()))");
+	cursor.execute("insert into BlipsInfo values (\"Province\", (now()))");
+	cursor.execute("insert into BlipsInfo values (\"City\", (now()))");
+
+	conn.commit()
+
+	cursor.close()
+	conn.close()
+
 def main():
 	us_cities()
 	canada_cities()
 	db_insert_cities()
+	initialize_info_table()
 
 main()
