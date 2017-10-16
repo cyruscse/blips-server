@@ -1,6 +1,7 @@
 const mysqlClient = require('./mysql_client.js');
 const hostname = 'localhost';
 
+// SQL query constant strings
 const cityQuery = "select * from City where ID = ";
 const provinceQuery = "select * from Province where ID = ";
 const countryQuery = "select * from Country where ID = ";
@@ -8,6 +9,9 @@ const countryQuery = "select * from Country where ID = ";
 const mysqlConnection = mysqlClient(hostname, 'root', 'pass', 'blips');
 mysqlConnection.connect();
 
+// Given a Country ID, query the SQL databse to get the Country row
+// If the row exists, call the callback function with the contents of the Blip array
+// (which contains the cityName, provinceName, and countryName)
 var countryLookup = (countryID, blip, callback) => {
 	var queryStr = countryQuery + mysqlConnection.escape(countryID);
 
@@ -20,6 +24,9 @@ var countryLookup = (countryID, blip, callback) => {
 	});
 }
 
+// Given a Province ID, query the SQL database to find the Country ID
+// If a row exists, add the provinceName to the blip array, call countryLookup to get the corresponding 
+// row from the Country table
 var provinceLookup = (provinceID, blip, callback) => {
 	var queryStr = provinceQuery + mysqlConnection.escape(provinceID);
 
@@ -32,6 +39,8 @@ var provinceLookup = (provinceID, blip, callback) => {
 	});
 }
 
+// Given a BlipID (cityID), query the SQL database to find the Province ID (PID)
+// If a row exists, add the cityName to the blip array, and call provinceLookup to find the CID
 exports.blipLookup = (cityID, callback) => {
 	var queryStr = cityQuery + mysqlConnection.escape(cityID);
 	var blipToReturn = [];
