@@ -16,7 +16,7 @@ var countryLookup = (countryID, blip, callback) => {
 
 		blip.push(countryResults[0].Name);
 
-		callback(blip[0] + ", " + blip[1] + ", " + blip[2] + "\n");
+		callback(blip[0], blip[1], blip[2]);
 	});
 }
 

@@ -9,9 +9,22 @@ const places = require('./places.js');
 const googleClient = require('./google_client.js');
 
 var httpResponse;
+var jsonInputs;
 
-var endResponse = (data) => {
-    httpResponse.end(data);
+var googleCallback = (blipLatitude, blipLongitude, apiResponse) => {
+    httpResponse.write("Latitude: " + blipLatitude + " Longitude: " + blipLongitude + "\n");
+    httpResponse.write(apiResponse.results.length + " locations: \n");
+
+    for (i = 0; i < apiResponse.results.length; i++) {
+        httpResponse.write("\t" + apiResponse.results[i].name + ", " + apiResponse.results[i].vicinity + "\n");
+    }
+
+    httpResponse.end();
+}
+
+var placeCallback = (cityName, provinceName, countryName) => {
+    httpResponse.write(cityName + ", " + provinceName + ", " + countryName + "\n");
+    googleClient.geocodeLocString(cityName, provinceName, countryName, jsonInputs.type, googleCallback);
 }
 
 var server = http.createServer((request, response) => {
@@ -39,12 +52,10 @@ var server = http.createServer((request, response) => {
                 return;
             }
 
+            jsonInputs = jsonRequest;
             httpResponse = response;
 
-            places.blipLookup(jsonRequest.cityID, endResponse);
-
-            //response.end(blip[0] + " " + blip[1] + " " + blip[2]);
-            //googleClient.geocodeLocString(cityName, provinceName, countryName, response, geocodeCallback);
+            places.blipLookup(jsonInputs.cityID, placeCallback);
         });
     }
     else {
