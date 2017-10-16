@@ -5,6 +5,10 @@ const Promise = require('promise');
 const hostname = 'localhost';
 const port = 3000;
 
+const cityQuery = "select * from City where ID = ";
+const provinceQuery = "select * from Province where ID = ";
+const countryQuery = "select * from Country where ID = ";
+
 // const places = require('./places.js'); - not yet implemented
 const googleClient = require('./google_client.js');
 const mysqlClient = require('./mysql_client.js');
@@ -13,7 +17,6 @@ const mysqlConnection = mysqlClient(hostname, 'root', 'pass', 'blips');
 mysqlConnection.connect();
 
 function getLocCallback(res, location) {
-    res.writeHead(200, {'Content-Type': 'text/html'});
     res.end('post received: location lat ' + location.lat + ' lng ' + location.lng + '\n');
 }
 
@@ -40,34 +43,54 @@ const server = http.createServer((req, res) =>
 
         req.on('end', function ()
         {
-            var queryStr = "select * from City where ID = " + mysqlConnection.escape(body);
+            res.writeHead(200, {'Content-Type': 'text/html'});
+
+            var queryStr =  cityQuery + mysqlConnection.escape(body);
 
             mysqlConnection.query(queryStr, function (error, cityResults, fields)
             {
                 if (error) throw error;
-                console.log('City is ' + cityResults[0].Name);
+
+                var cityName, provinceName, countryName;
+
+                try {
+                    cityName = cityResults[0].Name;
+                } catch (error) {
+                    res.end('post with bad data received, not querying');
+
+                    return;
+                }
 
                 //ugly nested queries, fix this...
 
-                queryStr = "select * from Province where ID = " + cityResults[0].PID;
+                queryStr = provinceQuery + cityResults[0].PID;
 
                 mysqlConnection.query(queryStr, function (error, provinceResults, fields)
                 {
                     if (error) throw error;
-                    console.log('Province is ' + provinceResults[0].Name);
+                    queryStr = countryQuery + cityResults[0].CID;
 
-                    queryStr = "select * from Country where ID = " + cityResults[0].CID;
+                    try {
+                        provinceName = provinceResults[0].Name;
+                    } catch (error) {
+                        res.end('SQL query failed for Province, aborting');
+
+                        return;
+                    }
 
                     mysqlConnection.query(queryStr, function (error, countryResults, fields)
                     {
                         if (error) throw error;
-                        console.log('Country is ' + countryResults[0].Name);
 
-                        var city = cityResults[0].Name;
-                        var province = provinceResults[0].Name;
-                        var country = countryResults[0].Name;
+                        try {
+                            countryName = countryResults[0].Name;
+                        } catch (error) {
+                            res.end('SQL query failed for Country, aborting');
 
-                        googleClient.geocodeLocString(city.toString(), province.toString(), country.toString(), res, geocodeCallback);
+                            return;
+                        }
+
+                        googleClient.geocodeLocString(cityName, provinceName, countryName, res, geocodeCallback);
                     })
                 })
             });

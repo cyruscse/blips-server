@@ -27,7 +27,7 @@ exports.geocodeLocString = (city, province, country, res, callback) => {
 exports.placesNearbyFromLoc = (location) => {
     var placesRet = mapsClient.placesNearby({ location: location, radius: 500, opennow: true, type: "lodging" }).asPromise()
 	    .then ((response) => {
-	        console.log(response.json)
+	    	console.log(response.json)
 	    })
 	    .catch ((err) => {
 	        console.log(err)
