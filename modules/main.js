@@ -16,39 +16,44 @@ const mysqlClient = require('./mysql_client.js');
 const mysqlConnection = mysqlClient(hostname, 'root', 'pass', 'blips');
 mysqlConnection.connect();
 
-function getLocCallback(res, location) {
-    res.end('post received: location lat ' + location.lat + ' lng ' + location.lng + '\n');
+function placesCallback(httpResponse, places) {
+    for (i = 0; i < places.json.results.length; i++) {
+        httpResponse.write(places.json.results[i].name + ", " + places.json.results[i].vicinity);
+        httpResponse.write('\n');
+    }
+
+    httpResponse.end('top ' + places.json.results.length + ' lodging attractions displayed\n');
 }
 
-function geocodeCallback(res, response) {
-    googleClient.getLocation(response.json, res, getLocCallback);
+function locationCallback(httpResponse, location) {
+    httpResponse.write('post received: location lat ' + location.lat + ' lng ' + location.lng + '\n');
+    googleClient.placesNearbyToLocation(location, httpResponse, placesCallback)
 }
 
-const server = http.createServer((req, res) => 
-{
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
+function geocodeCallback(httpResponse, mapResponse) {
+    googleClient.getLocation(mapResponse.json, httpResponse, locationCallback);
+}
 
-    if (req.method == 'POST') 
-    {
+const server = http.createServer((request, response) => {
+    response.statusCode = 200;
+    response.setHeader('Content-Type', 'text/plain');
+
+    if (request.method == 'POST') {
         console.log('POST');
 
         var body = '';
 
-        req.on('data', function (data)
-        {
+        request.on('data', function (data) {
             body += data;
             console.log('Partial body: ' + data);
         });
 
-        req.on('end', function ()
-        {
-            res.writeHead(200, {'Content-Type': 'text/html'});
+        request.on('end', function () {
+            response.writeHead(200, {'Content-Type': 'text/html'});
 
             var queryStr =  cityQuery + mysqlConnection.escape(body);
 
-            mysqlConnection.query(queryStr, function (error, cityResults, fields)
-            {
+            mysqlConnection.query(queryStr, function (error, cityResults, fields) {
                 if (error) throw error;
 
                 var cityName, provinceName, countryName;
@@ -56,7 +61,7 @@ const server = http.createServer((req, res) =>
                 try {
                     cityName = cityResults[0].Name;
                 } catch (error) {
-                    res.end('post with bad data received, not querying');
+                    response.end('post with bad data received, not querying');
 
                     return;
                 }
@@ -65,47 +70,43 @@ const server = http.createServer((req, res) =>
 
                 queryStr = provinceQuery + cityResults[0].PID;
 
-                mysqlConnection.query(queryStr, function (error, provinceResults, fields)
-                {
+                mysqlConnection.query(queryStr, function (error, provinceResults, fields) {
                     if (error) throw error;
                     queryStr = countryQuery + cityResults[0].CID;
 
                     try {
                         provinceName = provinceResults[0].Name;
                     } catch (error) {
-                        res.end('SQL query failed for Province, aborting');
+                        response.end('SQL query failed for Province, aborting');
 
                         return;
                     }
 
-                    mysqlConnection.query(queryStr, function (error, countryResults, fields)
-                    {
+                    mysqlConnection.query(queryStr, function (error, countryResults, fields) {
                         if (error) throw error;
 
                         try {
                             countryName = countryResults[0].Name;
                         } catch (error) {
-                            res.end('SQL query failed for Country, aborting');
+                            response.end('SQL query failed for Country, aborting');
 
                             return;
                         }
 
-                        googleClient.geocodeLocString(cityName, provinceName, countryName, res, geocodeCallback);
+                        googleClient.geocodeLocString(cityName, provinceName, countryName, response, geocodeCallback);
                     })
                 })
             });
         });
     }
-    else
-    {
+    else {
         console.log('GET');
         //var html = fs.readFileSync('index.html');
-        res.writeHead(200, {'Content-Type': 'text/html'});
-        res.end('get received');
+        response.writeHead(200, {'Content-Type': 'text/html'});
+        response.end('get received');
     }
 });
 
-server.listen(port, hostname, () => 
-{
+server.listen(port, hostname, () => {
     console.log('Server running at http://' + hostname + ':' + port + '/');
 });

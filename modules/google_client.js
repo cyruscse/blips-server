@@ -6,32 +6,31 @@ var mapsClient = maps.createClient({
     Promise   : Promise
 });
 
-exports.getLocation = (json, res, callback) => {
+exports.getLocation = (json, httpResponse, callback) => {
 	if (json.status == "OK") {
-		callback(res, json.results[0].geometry.location);
+		callback(httpResponse, json.results[0].geometry.location);
 	}
 }
 
-exports.geocodeLocString = (city, province, country, res, callback) => {
+exports.geocodeLocString = (city, province, country, httpResponse, callback) => {
 	mapsClient.geocode({ address: (city + " " + province + " " + country) }).asPromise()
-        .then ((response) => {
-        	console.log(response)
-        	callback(res, response)
+        .then ((mapResponse) => {
+        	console.log(mapResponse);
+        	callback(httpResponse, mapResponse);
         })
         .catch ((err) => {
-        	console.log(err)
+        	console.log(err);
             throw err;
         });
 }
 
-exports.placesNearbyFromLoc = (location) => {
-    var placesRet = mapsClient.placesNearby({ location: location, radius: 500, opennow: true, type: "lodging" }).asPromise()
-	    .then ((response) => {
-	    	console.log(response.json)
+exports.placesNearbyToLocation = (location, httpResponse, callback) => {
+    placesRet = mapsClient.placesNearby({ location: location, radius: 500, opennow: true, type: "lodging" }).asPromise()
+	    .then ((mapResponse) => {
+	    	//console.log(mapResponse.json);
+	    	callback(httpResponse, mapResponse);
 	    })
 	    .catch ((err) => {
-	        console.log(err)
+	        console.log(err);
 	    });
-
-	return placesRet;
 }
