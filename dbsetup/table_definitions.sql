@@ -21,8 +21,8 @@ create table City
 create table Lodging
 	(ID char(50) PRIMARY KEY,
 		BID int NOT NULL,
-		Name char(25) NOT NULL,
-		Latitude float NOT NULL,
-		Longitude float NOT NULL,
-		Rating float NOT NULL
+		Name char(100) NOT NULL,
+		Latitude float(10, 7) NOT NULL,
+		Longitude float(10, 7) NOT NULL,
+		Rating float
 		)

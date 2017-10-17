@@ -1,6 +1,10 @@
 const mysql = require('mysql');
 const hostname = 'localhost';
 
+const lastModTimeQuery = "select Updated from City where Name = ";
+const unixTimestampQuery = "select UNIX_TIMESTAMP ";
+const tableRowCountQuery = "select count(*) from ";
+
 var mySQLConnection = mysql.createConnection({
     host      : hostname,
     user      : 'root',
@@ -18,6 +22,44 @@ exports.queryAndCallback = (queryStr, queryCallback, callerCallback, queryArgs) 
 	});
 }
 
+exports.bulkInsert = (queryStr, values, callback) => {
+	mySQLConnection.query(queryStr, [values], function (error) {
+		if (error) throw error;
+
+		callback();
+	});
+}
+
 exports.escape = (string) => {
 	return mySQLConnection.escape(string);
+}
+
+exports.tableRowCount = (tableStr, blipID, callback) => {
+	var queryStr = tableRowCountQuery + tableStr + " where BID = " + blipID;
+
+	mySQLConnection.query(queryStr, function (error, results, fields) {
+		if (error) throw error;
+
+		var key = (Object.keys(results[0])[0]);
+
+		callback(results[0][key]);
+	});
+}
+
+exports.getBlipLastModifiedTime = (cityStr, callback) => {
+	var queryStr = lastModTimeQuery + mySQLConnection.escape(cityStr);
+
+	mySQLConnection.query(queryStr, function (error, results, fields) {
+		if (error) throw error;
+
+		var queryStr = unixTimestampQuery + "(" + mySQLConnection.escape(results[0].Updated) + ")";
+
+		mySQLConnection.query(queryStr, function (error, results, fields) {
+			if (error) throw error;
+
+			var key = (Object.keys(results[0])[0]);
+
+			callback(results[0][key]);
+		});
+	});
 }

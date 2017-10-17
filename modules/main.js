@@ -20,24 +20,54 @@ const places = require('./places.js');
 // gets nearby attractions (which can be filtered by attraction type)
 const googleClient = require('./google_client.js');
 
+const mySQLClient = require('./mysql_client.js');
+
+const oneDayInSeconds = 86400;
+
 // Response that goes back to POSTing client
 var httpResponse;
 
 // Inputs from client
 var jsonInputs;
 
-// Callback given to GoogleClient
-// If the Google API successfully retrieves the blip's location and gets the specified attractions,
-// this callback function formats the output and returns it to the Blips client
-var googleCallback = (blipLatitude, blipLongitude, apiResponse) => {
-    httpResponse.write("Latitude: " + blipLatitude + " Longitude: " + blipLongitude + "\n");
-    httpResponse.write(apiResponse.results.length + " locations: \n");
+var blip;
 
-    for (i = 0; i < apiResponse.results.length; i++) {
-        httpResponse.write("\t" + apiResponse.results[i].name + ", " + apiResponse.results[i].vicinity + " id " + apiResponse.results[i].id + "\n");
+var attractionsCallback = (results, callerCallback, callerArgs) => {
+    httpResponse.write(results.length + " locations: \n");
+
+    for (i = 0; i < results.length; i++) {
+        httpResponse.write("\tLocation ", (i + 1));
+        httpResponse.write("\tLatitude: " + results[i].Latitude + " Longitude: " + results[i].Longitude + "\n");
+        httpResponse.write("\tName: " + results[i].Name + " Rating: " + results[i].Rating + "\n");
     }
 
     httpResponse.end();
+}
+
+var blipRecacheCallback = () => {
+    var queryStr = "select * from " + jsonInputs.type;
+
+    mySQLClient.queryAndCallback(queryStr, attractionsCallback, null, null);
+}
+
+var tableRowCountCallback = (rowCount) => {
+    if (rowCount == 0) {
+        googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
+    }
+    else {
+        blipRecacheCallback();
+    }
+}
+
+var blipModTimeCallback = (time) => {
+    var currentTimeSeconds = Date.now() / 1000 | 0;
+
+    if (currentTimeSeconds > (time + oneDayInSeconds)) {
+        googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
+    }
+    else {
+        mySQLClient.tableRowCount(jsonInputs.type, jsonInputs.cityID, tableRowCountCallback);
+    }
 }
 
 // Callback given to Places
@@ -46,7 +76,12 @@ var googleCallback = (blipLatitude, blipLongitude, apiResponse) => {
 // the given city, province, and country name. (This can be further expanded to multiple callbacks that don't call the Google API)
 var placeCallback = (cityName, provinceName, countryName) => {
     httpResponse.write(cityName + ", " + provinceName + ", " + countryName + "\n");
-    googleClient.geocodeLocString(cityName, provinceName, countryName, jsonInputs.type, googleCallback);
+
+    blip.push(cityName);
+    blip.push(provinceName);
+    blip.push(countryName);
+
+    mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
 }
 
 // Create the HTTP server, use JavaScript's JSON parsing to format the client POSTed data
@@ -83,6 +118,7 @@ var server = http.createServer((request, response) => {
                 return;
             }
 
+            blip = new Array();
             jsonInputs = jsonRequest;
             httpResponse = response;
 
