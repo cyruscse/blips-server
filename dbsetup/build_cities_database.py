@@ -3,6 +3,7 @@
 # Get list of cities with greatest population in a few countries
 #
 # Data is gathered from Wikipedia pages for U.S. and Canada (for now)
+# Works with Python 3.3 (3.6 might not work, seems to be a PyMySQL issue)
 
 from urllib.request import urlopen
 import re
@@ -173,7 +174,7 @@ def db_insert_cities():
 
 			conn.begin()
 
-		cursor.execute("insert into City values (NULL, \"" + entry[0] + "\", " + str(db_state_indicies[entry[1]]) + ", " + str(db_country_indicies[entry[2]]) + ");")
+		cursor.execute("insert into City values (NULL, \"" + entry[0] + "\", " + str(db_state_indicies[entry[1]]) + ", " + str(db_country_indicies[entry[2]]) + ", 0);")
 
 	conn.commit()
 
@@ -201,6 +202,5 @@ def main():
 	us_cities()
 	canada_cities()
 	db_insert_cities()
-	initialize_info_table()
 
 main()

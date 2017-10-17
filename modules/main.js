@@ -34,7 +34,7 @@ var googleCallback = (blipLatitude, blipLongitude, apiResponse) => {
     httpResponse.write(apiResponse.results.length + " locations: \n");
 
     for (i = 0; i < apiResponse.results.length; i++) {
-        httpResponse.write("\t" + apiResponse.results[i].name + ", " + apiResponse.results[i].vicinity + "\n");
+        httpResponse.write("\t" + apiResponse.results[i].name + ", " + apiResponse.results[i].vicinity + " id " + apiResponse.results[i].id + "\n");
     }
 
     httpResponse.end();
@@ -69,6 +69,13 @@ var server = http.createServer((request, response) => {
 
             try {
                 jsonRequest = JSON.parse(body);
+
+                if (typeof jsonRequest != 'object') {
+                    console.log('Bad JSON posted'); //redirect this somewhere, implement different logging levels and system to handle levels
+                    response.end();
+
+                    return;
+                }
             } catch (error) {
                 console.log('Bad JSON posted'); //redirect this somewhere, implement different logging levels and system to handle levels
                 response.end();

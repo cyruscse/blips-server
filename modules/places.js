@@ -1,55 +1,53 @@
-const mysqlClient = require('./mysql_client.js');
-const hostname = 'localhost';
+const mySQLClient = require('./mysql_client.js');
 
 // SQL query constant strings
 const cityQuery = "select * from City where ID = ";
 const provinceQuery = "select * from Province where ID = ";
 const countryQuery = "select * from Country where ID = ";
 
-const mysqlConnection = mysqlClient(hostname, 'root', 'pass', 'blips');
-mysqlConnection.connect();
+var countryLookupCallback = (results, callback, args) => {
+	args[0].push(results[0].Name)
+
+	callback(args[0][0], args[0][1], args[0][2])
+}
 
 // Given a Country ID, query the SQL databse to get the Country row
 // If the row exists, call the callback function with the contents of the Blip array
 // (which contains the cityName, provinceName, and countryName)
-var countryLookup = (countryID, blip, callback) => {
-	var queryStr = countryQuery + mysqlConnection.escape(countryID);
+var countryLookup = (countryID, callbackArgs, callback) => {
+	var queryStr = countryQuery + mySQLClient.escape(countryID);
 
-	mysqlConnection.query(queryStr, function (error, countryResults, fields) {
-		if (error) throw error;
+	mySQLClient.queryAndCallback(queryStr, countryLookupCallback, callback, callbackArgs)
+}
 
-		blip.push(countryResults[0].Name);
+var provinceLookupCallback = (results, callback, args) => {
+	args[0].push(results[0].Name);
 
-		callback(blip[0], blip[1], blip[2]);
-	});
+	countryLookup(results[0].CID, args, callback);
 }
 
 // Given a Province ID, query the SQL database to find the Country ID
 // If a row exists, add the provinceName to the blip array, call countryLookup to get the corresponding 
 // row from the Country table
-var provinceLookup = (provinceID, blip, callback) => {
-	var queryStr = provinceQuery + mysqlConnection.escape(provinceID);
+var provinceLookup = (provinceID, callbackArgs, callback) => {
+	var queryStr = provinceQuery + mySQLClient.escape(provinceID);
 
-	mysqlConnection.query(queryStr, function (error, provinceResults, fields) {
-		if (error) throw error;
+	mySQLClient.queryAndCallback(queryStr, provinceLookupCallback, callback, callbackArgs)
+}
 
-		blip.push(provinceResults[0].Name);
+var cityLookupCallback = (results, callback, args) => {
+	args[0].push(results[0].Name);
 
-        countryLookup(provinceResults[0].CID, blip, callback);
-	});
+	provinceLookup(results[0].PID, args, callback);
 }
 
 // Given a BlipID (cityID), query the SQL database to find the Province ID (PID)
 // If a row exists, add the cityName to the blip array, and call provinceLookup to find the CID
 exports.blipLookup = (cityID, callback) => {
-	var queryStr = cityQuery + mysqlConnection.escape(cityID);
+	var queryStr = cityQuery + mySQLClient.escape(cityID);
 	var blipToReturn = [];
+	var callbackArgs = new Array();
+	callbackArgs.push(blipToReturn);
 
-	mysqlConnection.query(queryStr, function (error, cityResults, fields) {
-		if (error) throw error;
-
-		blipToReturn.push(cityResults[0].Name);
-
-        provinceLookup(cityResults[0].PID, blipToReturn, callback);
-	});
+	mySQLClient.queryAndCallback(queryStr, cityLookupCallback, callback, callbackArgs);
 }
