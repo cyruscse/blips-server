@@ -17,3 +17,4 @@ Root
    - places.js - Handles JSON POSTed by Blips clients, asks mysql_client to query the DB for city, province, and country
    - main.js - Receives JSON POSTed by Blips clients, interconnects all other modules to return responses to Blips clients
  
+ ./ReportContent - All relevant documents needed for report delivarbles
