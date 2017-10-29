@@ -10,7 +10,7 @@ const fs = require('fs');
 const Promise = require('promise');
 
 // Server address and port
-const hostname = 'localhost';
+const hostname = '172.16.0.2';
 const port = 3000;
 
 // Places queries the SQL database for the given Blip ID, provides city, province, and country names
@@ -35,11 +35,27 @@ var blip;
 var attractionsCallback = (results, callerCallback, callerArgs) => {
     httpResponse.write(results.length + " locations: \n");
 
+    /** MOVE THIS TO ITS OWN JSON MODULE **/
+
+    var jsonReply = {}
+
     for (i = 0; i < results.length; i++) {
-        httpResponse.write("\tLocation ", (i + 1));
-        httpResponse.write("\tLatitude: " + results[i].Latitude + " Longitude: " + results[i].Longitude + "\n");
-        httpResponse.write("\tName: " + results[i].Name + " Rating: " + results[i].Rating + "\n");
+        jsonReply[i] = [];
+
+        var data = {
+            name: results[i].Name,
+            latitude: results[i].Latitude,
+            longitude: results[i].Longitude,
+            rating: results[i].Rating
+        };
+
+        jsonReply[i].push(data);
     }
+
+    jsonReply = JSON.stringify(jsonReply)
+
+    console.log(jsonReply)
+    httpResponse.write(jsonReply)
 
     httpResponse.end();
 }
