@@ -18,9 +18,10 @@ create table City
 		CID int NOT NULL,
 		Updated TIMESTAMP NOT NULL);
 
-create table Lodging
+create table Blips
 	(ID char(50) PRIMARY KEY,
 		BID int NOT NULL,
+		Type char(100) NOT NULL,
 		Name char(100) NOT NULL,
 		Latitude float(10, 7) NOT NULL,
 		Longitude float(10, 7) NOT NULL,

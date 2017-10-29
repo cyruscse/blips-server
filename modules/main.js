@@ -45,7 +45,7 @@ var attractionsCallback = (results, callerCallback, callerArgs) => {
 }
 
 var blipRecacheCallback = () => {
-    var queryStr = "select * from " + jsonInputs.type;
+    var queryStr = "select * from Blips where Type = " + mySQLClient.escape(jsonInputs.type);
 
     mySQLClient.queryAndCallback(queryStr, attractionsCallback, null, null);
 }
@@ -66,7 +66,7 @@ var blipModTimeCallback = (time) => {
         googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
     }
     else {
-        mySQLClient.tableRowCount(jsonInputs.type, jsonInputs.cityID, tableRowCountCallback);
+        mySQLClient.tableRowCount(jsonInputs.cityID, tableRowCountCallback);
     }
 }
 
@@ -105,6 +105,8 @@ var server = http.createServer((request, response) => {
             try {
                 jsonRequest = JSON.parse(body);
 
+                console.log(jsonRequest);
+
                 if (typeof jsonRequest != 'object') {
                     console.log('Bad JSON posted'); //redirect this somewhere, implement different logging levels and system to handle levels
                     response.end();
@@ -112,7 +114,7 @@ var server = http.createServer((request, response) => {
                     return;
                 }
             } catch (error) {
-                console.log('Bad JSON posted'); //redirect this somewhere, implement different logging levels and system to handle levels
+                console.log('Bad JSON posted ' + error); //redirect this somewhere, implement different logging levels and system to handle levels
                 response.end();
 
                 return;

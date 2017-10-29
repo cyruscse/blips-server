@@ -60,6 +60,7 @@ var dbCachingCallback = (apiResponse) => {
 
 		row.push(apiResponse.results[i].id);
 		row.push(blipID);
+		row.push(attractionType);
 		row.push(apiResponse.results[i].name);
 		row.push(apiResponse.results[i].geometry.location.lat);
 		row.push(apiResponse.results[i].geometry.location.lng);
@@ -68,7 +69,7 @@ var dbCachingCallback = (apiResponse) => {
 		toInsert.push(row);
 	}
 
-	var queryStr = "insert into " + attractionType + " values ?";
+	var queryStr = "insert into blips values ?";
 
 	mySQLClient.bulkInsert(queryStr, toInsert, setCachedTime);
 }

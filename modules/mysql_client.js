@@ -3,7 +3,7 @@ const hostname = 'localhost';
 
 const lastModTimeQuery = "select Updated from City where Name = ";
 const unixTimestampQuery = "select UNIX_TIMESTAMP ";
-const tableRowCountQuery = "select count(*) from ";
+const tableRowCountQuery = "select count(*) from blips ";
 
 var mySQLConnection = mysql.createConnection({
     host      : hostname,
@@ -15,6 +15,8 @@ var mySQLConnection = mysql.createConnection({
 mySQLConnection.connect();
 
 exports.queryAndCallback = (queryStr, queryCallback, callerCallback, queryArgs) => {
+	console.log(queryStr)
+
 	mySQLConnection.query(queryStr, function (error, results, fields) {
 		if (error) throw error;
 
@@ -34,8 +36,8 @@ exports.escape = (string) => {
 	return mySQLConnection.escape(string);
 }
 
-exports.tableRowCount = (tableStr, blipID, callback) => {
-	var queryStr = tableRowCountQuery + tableStr + " where BID = " + blipID;
+exports.tableRowCount = (blipID, callback) => {
+	var queryStr = tableRowCountQuery + " where BID = " + blipID;
 
 	mySQLConnection.query(queryStr, function (error, results, fields) {
 		if (error) throw error;
