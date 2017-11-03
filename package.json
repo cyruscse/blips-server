@@ -1,8 +1,16 @@
 {
-  "name": "blips-server",
+  "name": "blips",
   "version": "0.0.1",
   "private": true,
-  "dependencies": {},
+  "dependencies": {
+    "ejs": "latest",
+    "aws-sdk": "latest",
+    "express": "latest",
+    "body-parser": "latest",
+    "promise": "latest",
+    "mysql": "latest",
+    "@google/maps": "latest"
+  },
   "scripts": {
     "start": "node main.js"
   }

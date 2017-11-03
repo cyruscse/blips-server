@@ -1,4 +1,4 @@
-const mysql = require('mysql');
+/*const mysql = require('mysql');
 const hostname = 'localhost';
 
 const lastModTimeQuery = "select Updated from City where Name = ";
@@ -64,4 +64,4 @@ exports.getBlipLastModifiedTime = (cityStr, callback) => {
 			callback(results[0][key]);
 		});
 	});
-}
+}*/

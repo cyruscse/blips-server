@@ -143,7 +143,6 @@ var server = http.createServer((request, response) => {
             jsonInputs = jsonRequest;
             httpResponse = response;*/
 
-            res.writeHead(200, 'OK', {'Content-Type': 'text/plain'});
             log('received POST');
             response.write('post');
             response.end();
@@ -154,6 +153,7 @@ var server = http.createServer((request, response) => {
     }
     else {
         console.log('GET');
+        log('received GET');
         response.writeHead(200, {'Content-Type': 'text/html'});
         response.write(html);
         response.end();

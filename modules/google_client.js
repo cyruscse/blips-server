@@ -1,6 +1,6 @@
 const maps = require('@google/maps');
 const Promise = require('promise');
-const mySQLClient = require('./mysql_client.js');
+//const mySQLClient = require('./mysql_client.js');
 
 const cachedQueryStr = "update City set Updated = (now()) where ID =";
 
