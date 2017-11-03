@@ -1,0 +1,9 @@
+{
+  "name": "blips-server",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {},
+  "scripts": {
+    "start": "node main.js"
+  }
+}

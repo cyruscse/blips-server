@@ -5,22 +5,20 @@
  * information on a Blip
  */
 
-const http = require('http');
-const fs = require('fs');
-const Promise = require('promise');
-
-// Server address and port
-const hostname = '172.16.0.2';
-const port = 3000;
+var port = process.env.PORT || 3000,
+    http = require('http'),
+    fs = require('fs'),
+    promise = require('promise'),
+    html = fs.readFileSync('index.html');
 
 // Places queries the SQL database for the given Blip ID, provides city, province, and country names
-const places = require('./places.js');
+const places = require('./modules/places.js');
 
 // GoogleClient queries the Google Maps and Places API for exact latitude/longitude for a blip, then
 // gets nearby attractions (which can be filtered by attraction type)
-const googleClient = require('./google_client.js');
+const googleClient = require('./modules/google_client.js');
 
-const mySQLClient = require('./mysql_client.js');
+const mySQLClient = require('./modules/mysql_client.js');
 
 const oneDayInSeconds = 86400;
 
@@ -100,6 +98,11 @@ var placeCallback = (cityName, provinceName, countryName) => {
     mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
 }
 
+// AWS Logging mechanism
+var log = function(entry) {
+    fs.appendFileSync('/tmp/sample-app.log', new Date().toISOString() + ' - ' + entry + '\n');
+};
+
 // Create the HTTP server, use JavaScript's JSON parsing to format the client POSTed data
 // Currently calls the Place blipLookup function
 var server = http.createServer((request, response) => {
@@ -116,7 +119,7 @@ var server = http.createServer((request, response) => {
         request.on('end', function () {
             response.writeHead(200, {'Content-Type': 'text/html'});
 
-            var jsonRequest;
+            /*var jsonRequest;
 
             try {
                 jsonRequest = JSON.parse(body);
@@ -138,20 +141,26 @@ var server = http.createServer((request, response) => {
 
             blip = new Array();
             jsonInputs = jsonRequest;
-            httpResponse = response;
+            httpResponse = response;*/
 
-            places.blipLookup(jsonInputs.cityID, placeCallback);
+            res.writeHead(200, 'OK', {'Content-Type': 'text/plain'});
+            log('received POST');
+            response.write('post');
+            response.end();
+
+            //places.blipLookup(jsonInputs.cityID, placeCallback);
+
         });
     }
     else {
         console.log('GET');
-        //var html = fs.readFileSync('index.html');
         response.writeHead(200, {'Content-Type': 'text/html'});
-        response.end('get received');
+        response.write(html);
+        response.end();
     }
 });
 
 // Listen on the earlier defined hostname and port
-server.listen(port, hostname, () => {
-    console.log('Server running at http://' + hostname + ':' + port + '/');
+server.listen(port, () => {
+    console.log('Server running at http://127.0.0.1:' + port + '/');
 });

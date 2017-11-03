@@ -3,6 +3,7 @@ Fourth Year Project - Blips server component
 
 blips-ios-client located at https://github.com/cyruscse/blips-iOS-client
 blips-android-client located at https://github.com/cyruscse/blips-android-client
+blips server AWS logging forwards to blipsserverlogs@gmail.com (need to add password here)
 
 Directory Structure & Contents
 
@@ -17,4 +18,4 @@ Root
    - places.js - Handles JSON POSTed by Blips clients, asks mysql_client to query the DB for city, province, and country
    - main.js - Receives JSON POSTed by Blips clients, interconnects all other modules to return responses to Blips clients
  
- ./ReportContent - All relevant documents needed for report delivarbles
+./ReportContent - All relevant documents needed for report delivarbles
