@@ -2,6 +2,9 @@ const mysql = require('mysql');
 const fs = require('fs');
 const pythonshell = require('python-shell');
 const hostname = 'aa5icva8ezh544.crnuwmhdforv.us-east-2.rds.amazonaws.com';
+const dbuser = 'blips';
+const dbpass = 'passpass';
+const dbname = 'blips';
 
 const lastModTimeQuery = "select Updated from City where Name = ";
 const unixTimestampQuery = "select UNIX_TIMESTAMP ";
@@ -9,8 +12,8 @@ const tableRowCountQuery = "select count(*) from blips ";
 
 var mySQLConnection = mysql.createConnection({
     host      : hostname,
-    user      : 'blips',
-    password  : 'passpass',
+    user      : dbuser,
+    password  : dbpass,
 });
 
 
@@ -22,14 +25,18 @@ function schemaSetup() {
 
 		mySQLConnection.query(sqlSchema[index], function (error, results, fields) {
 			if (error) throw error;
-
-			console.log(sqlSchema[index]);
 		});
 	}
 }
 
 function buildCitiesDatabase() {
-	pythonshell.run('dbsetup/build_cities_database.py', function (error, results) {
+	var options = {
+		mode: 'text',
+		pythonPath: '/usr/bin/python35',
+		args: [hostname, dbuser, dbpass, dbname]
+	};
+
+	pythonshell.run('dbsetup/build_cities_database.py', options, function (error, results) {
 		if (error) throw error;
 
 		console.log(results);

@@ -7,17 +7,18 @@
 
 from urllib.request import urlopen
 import re
+import sys
 
 # https://github.com/PyMySQL
 import pymysql
 
 us_wiki_url = "https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population"
 canada_wiki_url = "https://en.wikipedia.org/wiki/List_of_the_100_largest_municipalities_in_Canada_by_population"
-db_address = "localhost"
+db_address = ""
 db_port = 3306
-db_user = "root"
-db_pass = "pass"
-db = "blips"
+db_user = ""
+db_pass = ""
+db = ""
 
 # List of tuples to add to DB
 db_entries = []
@@ -199,6 +200,19 @@ def initialize_info_table():
 	conn.close()
 
 def main():
+	if len(sys.argv) is not 5:
+		print("Invalid number of arguments")
+
+	global db_address
+	global db_user
+	global db_pass
+	global db
+
+	db_address = sys.argv[1]
+	db_user = sys.argv[2]
+	db_pass = sys.argv[3]
+	db = sys.argv[4]
+
 	us_cities()
 	canada_cities()
 	db_insert_cities()
