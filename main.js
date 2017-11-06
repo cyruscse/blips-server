@@ -59,13 +59,14 @@ var attractionsCallback = (results, callerCallback, callerArgs) => {
 }
 
 var blipRecacheCallback = () => {
-    /*var queryStr = "select * from Blips where Type = " + mySQLClient.escape(jsonInputs.type);
+    var queryStr = "select * from Blips where Type = " + mySQLClient.escape(jsonInputs.type);
 
-    mySQLClient.queryAndCallback(queryStr, attractionsCallback, null, null);*/
+    mySQLClient.queryAndCallback(queryStr, attractionsCallback, null, null);
 }
 
 var tableRowCountCallback = (rowCount) => {
     if (rowCount == 0) {
+        console.log("db empty for blip, cache call for cityID " + jsonInputs.cityID);   // filter this into its own DB caching log
         googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
     }
     else {
@@ -74,14 +75,15 @@ var tableRowCountCallback = (rowCount) => {
 }
 
 var blipModTimeCallback = (time) => {
-    /*var currentTimeSeconds = Date.now() / 1000 | 0;
+    var currentTimeSeconds = Date.now() / 1000 | 0;
 
     if (currentTimeSeconds > (time + oneDayInSeconds)) {
+        console.log("stale DB (cached at " + time + ", currently " + currentTimeSeconds + ") , cache call for cityID " + jsonInputs.cityID);    // filter this into its own DB caching log
         googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
     }
     else {
         mySQLClient.tableRowCount(jsonInputs.cityID, tableRowCountCallback);
-    }*/
+    }
 }
 
 // Callback given to Places
@@ -95,12 +97,10 @@ var placeCallback = (cityName, provinceName, countryName) => {
     blip.push(provinceName);
     blip.push(countryName);
 
-    httpResponse.end();
-
-    //mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
+    mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
 }
 
-// AWS Logging mechanism
+// AWS Logging mechanism - this can be extended for issue #5 to have different log files for different modules
 var log = function(entry) {
     fs.appendFileSync('/tmp/sample-app.log', new Date().toISOString() + ' - ' + entry + '\n');
 };
@@ -145,6 +145,7 @@ var server = http.createServer((request, response) => {
             jsonInputs = jsonRequest;
             httpResponse = response;
 
+            console.log('received POST');
             log('received POST');
             places.blipLookup(jsonInputs.cityID, placeCallback);
         });

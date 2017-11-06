@@ -28,4 +28,4 @@ create table Blips
 		Latitude float(10, 7) NOT NULL,
 		Longitude float(10, 7) NOT NULL,
 		Rating float
-		)
+		);
