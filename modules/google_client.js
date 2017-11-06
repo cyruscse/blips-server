@@ -69,7 +69,7 @@ var dbCachingCallback = (apiResponse) => {
 		toInsert.push(row);
 	}
 
-	var queryStr = "insert into blips values ?";
+	var queryStr = "insert into Blips values ?";
 
 	mySQLClient.bulkInsert(queryStr, toInsert, setCachedTime);
 }

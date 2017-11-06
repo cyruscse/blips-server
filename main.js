@@ -5,22 +5,20 @@
  * information on a Blip
  */
 
-const http = require('http');
-const fs = require('fs');
-const Promise = require('promise');
-
-// Server address and port
-const hostname = '172.16.0.2';
-const port = 3000;
+var port = process.env.PORT || 3000,
+    http = require('http'),
+    fs = require('fs'),
+    promise = require('promise'),
+    html = fs.readFileSync('index.html');
 
 // Places queries the SQL database for the given Blip ID, provides city, province, and country names
-const places = require('./places.js');
+const places = require('./modules/places.js');
 
 // GoogleClient queries the Google Maps and Places API for exact latitude/longitude for a blip, then
 // gets nearby attractions (which can be filtered by attraction type)
-const googleClient = require('./google_client.js');
+const googleClient = require('./modules/google_client.js');
 
-const mySQLClient = require('./mysql_client.js');
+const mySQLClient = require('./modules/mysql_client.js');
 
 const oneDayInSeconds = 86400;
 
@@ -68,6 +66,7 @@ var blipRecacheCallback = () => {
 
 var tableRowCountCallback = (rowCount) => {
     if (rowCount == 0) {
+        console.log("db empty for blip, cache call for cityID " + jsonInputs.cityID);   // filter this into its own DB caching log
         googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
     }
     else {
@@ -79,6 +78,7 @@ var blipModTimeCallback = (time) => {
     var currentTimeSeconds = Date.now() / 1000 | 0;
 
     if (currentTimeSeconds > (time + oneDayInSeconds)) {
+        console.log("stale DB (cached at " + time + ", currently " + currentTimeSeconds + ") , cache call for cityID " + jsonInputs.cityID);    // filter this into its own DB caching log
         googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
     }
     else {
@@ -99,6 +99,11 @@ var placeCallback = (cityName, provinceName, countryName) => {
 
     mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
 }
+
+// AWS Logging mechanism - this can be extended for issue #5 to have different log files for different modules
+var log = function(entry) {
+    fs.appendFileSync('/tmp/sample-app.log', new Date().toISOString() + ' - ' + entry + '\n');
+};
 
 // Create the HTTP server, use JavaScript's JSON parsing to format the client POSTed data
 // Currently calls the Place blipLookup function
@@ -140,18 +145,21 @@ var server = http.createServer((request, response) => {
             jsonInputs = jsonRequest;
             httpResponse = response;
 
+            console.log('received POST');
+            log('received POST');
             places.blipLookup(jsonInputs.cityID, placeCallback);
         });
     }
     else {
         console.log('GET');
-        //var html = fs.readFileSync('index.html');
+        log('received GET');
         response.writeHead(200, {'Content-Type': 'text/html'});
-        response.end('get received');
+        response.write(html);
+        response.end();
     }
 });
 
 // Listen on the earlier defined hostname and port
-server.listen(port, hostname, () => {
-    console.log('Server running at http://' + hostname + ':' + port + '/');
+server.listen(port, () => {
+    console.log('Server running at http://127.0.0.1:' + port + '/');
 });

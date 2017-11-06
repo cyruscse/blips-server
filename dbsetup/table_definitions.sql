@@ -1,4 +1,6 @@
-# create database blips; This doesn't work, need to have database created already
+drop database blips;
+
+create database blips;
 
 use blips;
 
@@ -26,4 +28,4 @@ create table Blips
 		Latitude float(10, 7) NOT NULL,
 		Longitude float(10, 7) NOT NULL,
 		Rating float
-		)
+		);
