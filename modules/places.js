@@ -1,4 +1,4 @@
-//const mySQLClient = require('./mysql_client.js');
+const mySQLClient = require('./mysql_client.js');
 
 // SQL query constant strings
 const cityQuery = "select * from City where ID = ";

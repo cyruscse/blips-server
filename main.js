@@ -95,6 +95,8 @@ var placeCallback = (cityName, provinceName, countryName) => {
     blip.push(provinceName);
     blip.push(countryName);
 
+    httpResponse.end();
+
     //mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
 }
 
@@ -144,11 +146,7 @@ var server = http.createServer((request, response) => {
             httpResponse = response;
 
             log('received POST');
-            response.write('post ' + jsonInputs.cityID + " " + jsonInputs.type);
-            response.end();
-
-            //places.blipLookup(jsonInputs.cityID, placeCallback);
-
+            places.blipLookup(jsonInputs.cityID, placeCallback);
         });
     }
     else {
