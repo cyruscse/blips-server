@@ -18,7 +18,7 @@ const places = require('./modules/places.js');
 // gets nearby attractions (which can be filtered by attraction type)
 const googleClient = require('./modules/google_client.js');
 
-const mySQLClient = require('./modules/mysql_client.js');
+//const mySQLClient = require('./modules/mysql_client.js');
 
 const oneDayInSeconds = 86400;
 
@@ -59,9 +59,9 @@ var attractionsCallback = (results, callerCallback, callerArgs) => {
 }
 
 var blipRecacheCallback = () => {
-    var queryStr = "select * from Blips where Type = " + mySQLClient.escape(jsonInputs.type);
+    /*var queryStr = "select * from Blips where Type = " + mySQLClient.escape(jsonInputs.type);
 
-    mySQLClient.queryAndCallback(queryStr, attractionsCallback, null, null);
+    mySQLClient.queryAndCallback(queryStr, attractionsCallback, null, null);*/
 }
 
 var tableRowCountCallback = (rowCount) => {
@@ -74,14 +74,14 @@ var tableRowCountCallback = (rowCount) => {
 }
 
 var blipModTimeCallback = (time) => {
-    var currentTimeSeconds = Date.now() / 1000 | 0;
+    /*var currentTimeSeconds = Date.now() / 1000 | 0;
 
     if (currentTimeSeconds > (time + oneDayInSeconds)) {
         googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
     }
     else {
         mySQLClient.tableRowCount(jsonInputs.cityID, tableRowCountCallback);
-    }
+    }*/
 }
 
 // Callback given to Places
@@ -95,7 +95,7 @@ var placeCallback = (cityName, provinceName, countryName) => {
     blip.push(provinceName);
     blip.push(countryName);
 
-    mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
+    //mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
 }
 
 // AWS Logging mechanism
@@ -119,7 +119,7 @@ var server = http.createServer((request, response) => {
         request.on('end', function () {
             response.writeHead(200, {'Content-Type': 'text/html'});
 
-            /*var jsonRequest;
+            var jsonRequest;
 
             try {
                 jsonRequest = JSON.parse(body);
@@ -141,10 +141,10 @@ var server = http.createServer((request, response) => {
 
             blip = new Array();
             jsonInputs = jsonRequest;
-            httpResponse = response;*/
+            httpResponse = response;
 
             log('received POST');
-            response.write('post');
+            response.write('post ' + jsonInputs.cityID + " " + jsonInputs.type);
             response.end();
 
             //places.blipLookup(jsonInputs.cityID, placeCallback);
