@@ -1,4 +1,6 @@
 const mysql = require('mysql');
+const fs = require('fs');
+const pythonshell = require('python-shell');
 const hostname = 'aa5icva8ezh544.crnuwmhdforv.us-east-2.rds.amazonaws.com';
 
 const lastModTimeQuery = "select Updated from City where Name = ";
@@ -9,10 +11,34 @@ var mySQLConnection = mysql.createConnection({
     host      : hostname,
     user      : 'blips',
     password  : 'passpass',
-    database  : 'blips'
 });
 
+
+function schemaSetup() {
+	sqlSchema = fs.readFileSync("dbsetup/table_definitions.sql", "utf-8").split(";");
+
+	for (index in sqlSchema) {
+		sqlSchema[index].replace("\n", "").replace("\t", "");
+
+		mySQLConnection.query(sqlSchema[index], function (error, results, fields) {
+			if (error) throw error;
+
+			console.log(sqlSchema[index]);
+		});
+	}
+}
+
+function buildCitiesDatabase() {
+	pythonshell.run('dbsetup/build_cities_database.py', function (error, results) {
+		if (error) throw error;
+
+		console.log(results);
+	});
+}
+
 mySQLConnection.connect();
+schemaSetup();
+buildCitiesDatabase();
 
 exports.queryAndCallback = (queryStr, queryCallback, callerCallback, queryArgs) => {
 /*	console.log(queryStr)

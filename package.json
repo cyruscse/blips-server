@@ -9,7 +9,8 @@
     "body-parser": "latest",
     "promise": "latest",
     "mysql": "latest",
-    "@google/maps": "latest"
+    "@google/maps": "latest",
+    "python-shell": "latest"
   },
   "scripts": {
     "start": "node main.js"

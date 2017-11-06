@@ -1,4 +1,6 @@
-# create database blips; This doesn't work, need to have database created already
+drop database blips;
+
+create database blips;
 
 use blips;
 
