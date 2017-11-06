@@ -18,7 +18,7 @@ const places = require('./modules/places.js');
 // gets nearby attractions (which can be filtered by attraction type)
 const googleClient = require('./modules/google_client.js');
 
-//const mySQLClient = require('./modules/mysql_client.js');
+const mySQLClient = require('./modules/mysql_client.js');
 
 const oneDayInSeconds = 86400;
 

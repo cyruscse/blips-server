@@ -1,19 +1,19 @@
 const mysql = require('mysql');
-const hostname = 'localhost';
+const hostname = 'aa5icva8ezh544.crnuwmhdforv.us-east-2.rds.amazonaws.com';
 
 const lastModTimeQuery = "select Updated from City where Name = ";
 const unixTimestampQuery = "select UNIX_TIMESTAMP ";
 const tableRowCountQuery = "select count(*) from blips ";
 
-/*var mySQLConnection = mysql.createConnection({
+var mySQLConnection = mysql.createConnection({
     host      : hostname,
-    user      : 'root',
-    password  : 'pass',
+    user      : 'blips',
+    password  : 'passpass',
     database  : 'blips'
 });
 
 mySQLConnection.connect();
-*/
+
 exports.queryAndCallback = (queryStr, queryCallback, callerCallback, queryArgs) => {
 /*	console.log(queryStr)
 
