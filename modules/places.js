@@ -1,14 +1,19 @@
 const mySQLClient = require('./mysql_client.js');
 
+var loggingModule = require('./logging.js');
+var logging = new loggingModule('places', loggingModule.trace_level);
+
 // SQL query constant strings
 const cityQuery = "select * from City where ID = ";
 const provinceQuery = "select * from Province where ID = ";
 const countryQuery = "select * from Country where ID = ";
 
 var countryLookupCallback = (results, callback, args) => {
-	args[0].push(results[0].Name)
+	args[0].push(results[0].Name);
 
-	callback(args[0][0], args[0][1], args[0][2])
+	logging.log(loggingModule.trace_level, "place lookup complete " + args[0][0] + " " + args[0][1] + " " + args[0][2]);
+
+	callback(args[0][0], args[0][1], args[0][2]);
 }
 
 // Given a Country ID, query the SQL databse to get the Country row

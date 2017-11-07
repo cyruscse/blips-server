@@ -10,6 +10,9 @@ var mapsClient = maps.createClient({
     Promise   : Promise
 });
 
+var loggingModule = require('./logging.js');
+var logging = new loggingModule('google_client', loggingModule.trace_level);
+
 var attractionType;
 var callerCallback;
 var blipID;
@@ -23,7 +26,7 @@ var placesNearbyToLocation = (location) => {
 	    	dbCachingCallback(mapResponse.json)
 	    })
 	    .catch ((err) => {
-	        console.log(err);
+	        logging.log(loggingModule.error_level, err);
 	    });
 }
 
@@ -37,7 +40,7 @@ var geocodeLocString = () => {
         	placesNearbyToLocation(mapResponse.json.results[0].geometry.location);
         })
         .catch ((err) => {
-        	console.log(err);
+        	logging.log(loggingModule.error_level, err);
             throw err;
         });
 }
