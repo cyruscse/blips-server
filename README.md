@@ -20,3 +20,27 @@ Root
 ./package.json - Metadata for AWS deployment, sets Node dependencies and defines initial call into Node
 ./main.js - Receives JSON POSTed by Blips clients, interconnects all other modules to return responses to Blips clients 
 ./ReportContent - All relevant documents needed for report deliverables
+
+AWS Deployment Instructions
+
+- Install awsebcli (pip install awsebcli)
+
+- Change to project directory
+
+- Edit .elasticbeanstalk/config.yml to contain
+deploy:
+  artifact: build/blips.zip
+
+- eb init (blips-server is located in 13 - Ohio)
+
+- zip -r build/blips.zip * (from project root)
+
+- eb deploy
+
+AWS Useful Tools
+
+- With awsebcli installed:
+
+- eb ssh (SSH to AWS server running blips-server, can manually view logs, change server environment)
+- eb logs (self-explanatory, this should also return logs created by logging.js, need to confirm)
+- eb status

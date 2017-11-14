@@ -34,11 +34,19 @@ var loggingModule = require('./modules/logging.js');
 var logging = new loggingModule('main', loggingModule.trace_level);
 
 var attractionsCallback = (results, callerCallback, callerArgs) => {
-    httpResponse.write(results.length + " locations: \n");
-
     /** MOVE THIS TO ITS OWN JSON MODULE **/
+    /** REALLY, THIS IS UGLY, ESPECIALLY PUSHING BASIC BLIP INFO **/
 
     var jsonReply = {};
+
+    var data = {
+        city: blip[0],
+        state: blip[1],
+        country: blip[2]
+    };
+
+    jsonReply["blip"] = [];
+    jsonReply["blip"].push(data);
 
     for (i = 0; i < results.length; i++) {
         jsonReply[i] = [];
@@ -90,12 +98,9 @@ var blipModTimeCallback = (time) => {
 }
 
 // Callback given to Places
-// If Places successfully queries the SQL database for the POSTed BID (BlipID), this callback function
-// adds the city name, province name, and country name to the HTTP response. It then calls the GoogleClient with
+// If Places successfully queries the SQL database for the POSTed BID (BlipID), ... It then calls the GoogleClient with
 // the given city, province, and country name. (This can be further expanded to multiple callbacks that don't call the Google API)
 var placeCallback = (cityName, provinceName, countryName) => {
-    httpResponse.write(cityName + ", " + provinceName + ", " + countryName + "\n");
-
     blip.push(cityName);
     blip.push(provinceName);
     blip.push(countryName);
