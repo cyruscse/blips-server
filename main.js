@@ -35,7 +35,7 @@ var logging = new loggingModule('main', loggingModule.trace_level);
 
 var attractionsCallback = (results, callerCallback, callerArgs) => {
     /** MOVE THIS TO ITS OWN JSON MODULE **/
-    /** REALLY, THIS IS UGLY, ESPECIALLY PUSHING BASIC BLIP INFO **/
+    /** REALLY, THIS IS UGLY, ESPECIALLY PUSHING BASIC BLIP INFOj **/
 
     var jsonReply = {};
 
@@ -70,7 +70,7 @@ var attractionsCallback = (results, callerCallback, callerArgs) => {
 }
 
 var blipRecacheCallback = () => {
-    var queryStr = "select * from Blips where Type = " + mySQLClient.escape(jsonInputs.type);
+    var queryStr = "select * from Blips where Type = " + mySQLClient.escape(jsonInputs.type) + " and BID = " + mySQLClient.escape(jsonInputs.cityID);
 
     mySQLClient.queryAndCallback(queryStr, attractionsCallback, null, null);
 }
