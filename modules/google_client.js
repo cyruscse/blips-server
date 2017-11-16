@@ -58,6 +58,10 @@ var setCachedTime = () => {
 var dbCachingCallback = (apiResponse) => {
 	var toInsert = new Array();
 
+	if (apiResponse.results.length == 0) {
+		return;
+	}
+
 	for (i = 0; i < apiResponse.results.length; i++) {
 		var row = new Array();
 

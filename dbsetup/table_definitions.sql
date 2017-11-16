@@ -1,5 +1,3 @@
-drop database blips;
-
 create database blips;
 
 use blips;

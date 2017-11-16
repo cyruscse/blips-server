@@ -16,6 +16,7 @@ const build_database = "dbsetup/build_cities_database.py";
 const lastModTimeQuery = "select Updated from City where Name = ";
 const unixTimestampQuery = "select UNIX_TIMESTAMP ";
 const tableRowCountQuery = "select count(*) from Blips ";
+const blipsDbExistsQuery = "use blips"
 
 /*****************************************************
  **													**
@@ -33,14 +34,7 @@ var mySQLConnection = mysql.createConnection({
     password  : dbpass,
 });
 
-/**
- *  schemaSetup() executes all SQL statements in table_definitions to 
- *  have the DB schema ready for SQL queries.
- *
- *  ISSUE (#4): This function doesn't check if the DB is in a good state,
- *	it always drops the DB and rebuilds it. This should be addressed.
- */
-function schemaSetup() {
+function buildSchema() {
 	sqlSchema = fs.readFileSync(table_definitions, "utf-8").split(";");
 
 	for (index = 0; index < (sqlSchema.length - 1); index++) {
@@ -52,6 +46,27 @@ function schemaSetup() {
 			if (error) throw error;
 		});
 	}
+
+	buildCitiesDatabase();
+}
+
+/**
+ *  schemaSetup() executes all SQL statements in table_definitions to 
+ *  have the DB schema ready for SQL queries.
+ *
+ *  ISSUE (#4): This function doesn't check if the DB is in a good state,
+ *	it always drops the DB and rebuilds it. This should be addressed.
+ */
+function schemaSetup() {
+	mySQLConnection.query(blipsDbExistsQuery, function (error, results, fields) {
+		if (error) {
+			console.log("DB schema missing, rebuilding basic DB");
+			buildSchema();
+			return;
+		}
+
+		console.log("DB Schema exists, not rebuilding");
+	});
 }
 
 /**
@@ -79,7 +94,6 @@ function buildCitiesDatabase() {
 // mysql_client setup, connect to MySQL server and build initial DB tables
 mySQLConnection.connect();
 schemaSetup();
-buildCitiesDatabase();
 
 /*****************************************************
  **													**
