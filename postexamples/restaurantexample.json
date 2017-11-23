@@ -1,4 +1,5 @@
 { 
-	"cityID" : 1,
-  	"type"   : "restaurant"
+	"requestType" : "query", 
+	"cityID"      : 1,
+  	"type"        : "restaurant"
 }

@@ -1,4 +1,5 @@
-{ 
-	"cityID" : 5,
-  	"type"   : "lodging"
+{
+	"requestType" : "query", 
+	"cityID"      : 5,
+  	"type"        : "lodging"
 }

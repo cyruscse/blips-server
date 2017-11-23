@@ -16,7 +16,7 @@ exports.log = (entry_trace_level, module_trace_level, log_file, entry) => {
         }
     }
 
-    if (this.module_trace_level == this.critical_level) {
+    if (entry_trace_level == this.critical_level) {
     	console.log(toLog);
     }
 }

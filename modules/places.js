@@ -32,11 +32,15 @@ var countryLookupCallback = (results, callback, args) => {
 var countryLookup = (countryID, callbackArgs, callback) => {
 	var queryStr = countryQuery + mySQLClient.escape(countryID);
 
+	log(logging.trace_level, 'Looking up country name with ID ' + countryID);
+
 	mySQLClient.queryAndCallback(queryStr, countryLookupCallback, callback, callbackArgs)
 }
 
 var provinceLookupCallback = (results, callback, args) => {
 	args[0].push(results[0].Name);
+
+	log(logging.trace_level, 'Got Province Name ' + results[0].Name);
 
 	countryLookup(results[0].CID, args, callback);
 }
@@ -47,11 +51,15 @@ var provinceLookupCallback = (results, callback, args) => {
 var provinceLookup = (provinceID, callbackArgs, callback) => {
 	var queryStr = provinceQuery + mySQLClient.escape(provinceID);
 
+	log(logging.trace_level, 'Looking up province name with ID ' + provinceID);
+
 	mySQLClient.queryAndCallback(queryStr, provinceLookupCallback, callback, callbackArgs)
 }
 
 var cityLookupCallback = (results, callback, args) => {
 	args[0].push(results[0].Name);
+
+	log(logging.trace_level, 'Got City Name ' + results[0].Name);
 
 	provinceLookup(results[0].PID, args, callback);
 }
@@ -63,6 +71,8 @@ exports.blipLookup = (cityID, callback) => {
 	var blipToReturn = [];
 	var callbackArgs = new Array();
 	callbackArgs.push(blipToReturn);
+
+	log(logging.trace_level, 'Blip lookup for cityID ' + cityID + ' query ' + queryStr);
 
 	mySQLClient.queryAndCallback(queryStr, cityLookupCallback, callback, callbackArgs);
 }
