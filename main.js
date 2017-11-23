@@ -11,31 +11,46 @@ var port = process.env.PORT || 3000,
     promise = require('promise'),
     html = fs.readFileSync('index.html');
 
-// Places queries the SQL database for the given Blip ID, provides city, province, and country names
 const places = require('./modules/places.js');
-
-// GoogleClient queries the Google Maps and Places API for exact latitude/longitude for a blip, then
-// gets nearby attractions (which can be filtered by attraction type)
 const googleClient = require('./modules/google_client.js');
-
 const mySQLClient = require('./modules/mysql_client.js');
+const logging = require('./modules/logging.js');
 
 const oneDayInSeconds = 86400;
 
 // Response that goes back to POSTing client
 var httpResponse;
-
 // Inputs from client
 var jsonInputs;
 
 var blip;
 
+// Logging Module setup
+const log_file = '/tmp/main.log';
+var module_trace_level = logging.warning_level;
+
+function log (entry_trace_level, entry) {
+    logging.log(entry_trace_level, module_trace_level, log_file, entry);
+}
+
+function setModuleTraceLevel (newLevel) {
+    module_trace_level = newLevel;
+}
+
 var attractionsCallback = (results, callerCallback, callerArgs) => {
-    httpResponse.write(results.length + " locations: \n");
-
     /** MOVE THIS TO ITS OWN JSON MODULE **/
+    /** REALLY, THIS IS UGLY, ESPECIALLY PUSHING BASIC BLIP INFOj **/
 
-    var jsonReply = {}
+    var jsonReply = {};
+
+    var data = {
+        city: blip[0],
+        state: blip[1],
+        country: blip[2]
+    };
+
+    jsonReply["blip"] = [];
+    jsonReply["blip"].push(data);
 
     for (i = 0; i < results.length; i++) {
         jsonReply[i] = [];
@@ -50,23 +65,23 @@ var attractionsCallback = (results, callerCallback, callerArgs) => {
         jsonReply[i].push(data);
     }
 
-    jsonReply = JSON.stringify(jsonReply)
+    jsonReply = JSON.stringify(jsonReply);
 
-    console.log(jsonReply)
-    httpResponse.write(jsonReply)
+    log(logging.trace_level, "Responding with " + jsonReply);
+    httpResponse.write(jsonReply);
 
     httpResponse.end();
 }
 
 var blipRecacheCallback = () => {
-    var queryStr = "select * from Blips where Type = " + mySQLClient.escape(jsonInputs.type);
+    var queryStr = "select * from Blips where Type = " + mySQLClient.escape(jsonInputs.type) + " and BID = " + mySQLClient.escape(jsonInputs.cityID);
 
     mySQLClient.queryAndCallback(queryStr, attractionsCallback, null, null);
 }
 
 var tableRowCountCallback = (rowCount) => {
     if (rowCount == 0) {
-        console.log("db empty for blip, cache call for cityID " + jsonInputs.cityID);   // filter this into its own DB caching log
+        log(logging.warning_level, "db empty for blip, cache call for cityID " + jsonInputs.cityID);
         googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
     }
     else {
@@ -78,7 +93,7 @@ var blipModTimeCallback = (time) => {
     var currentTimeSeconds = Date.now() / 1000 | 0;
 
     if (currentTimeSeconds > (time + oneDayInSeconds)) {
-        console.log("stale DB (cached at " + time + ", currently " + currentTimeSeconds + ") , cache call for cityID " + jsonInputs.cityID);    // filter this into its own DB caching log
+        log(logging.warning_level, "stale DB (cached at " + time + ", currently " + currentTimeSeconds + ") , cache call for cityID " + jsonInputs.cityID);
         googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
     }
     else {
@@ -87,23 +102,15 @@ var blipModTimeCallback = (time) => {
 }
 
 // Callback given to Places
-// If Places successfully queries the SQL database for the POSTed BID (BlipID), this callback function
-// adds the city name, province name, and country name to the HTTP response. It then calls the GoogleClient with
+// If Places successfully queries the SQL database for the POSTed BID (BlipID), ... It then calls the GoogleClient with
 // the given city, province, and country name. (This can be further expanded to multiple callbacks that don't call the Google API)
 var placeCallback = (cityName, provinceName, countryName) => {
-    httpResponse.write(cityName + ", " + provinceName + ", " + countryName + "\n");
-
     blip.push(cityName);
     blip.push(provinceName);
     blip.push(countryName);
 
     mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
 }
-
-// AWS Logging mechanism - this can be extended for issue #5 to have different log files for different modules
-var log = function(entry) {
-    fs.appendFileSync('/tmp/sample-app.log', new Date().toISOString() + ' - ' + entry + '\n');
-};
 
 // Create the HTTP server, use JavaScript's JSON parsing to format the client POSTed data
 // Currently calls the Place blipLookup function
@@ -126,16 +133,16 @@ var server = http.createServer((request, response) => {
             try {
                 jsonRequest = JSON.parse(body);
 
-                console.log(jsonRequest);
+                log(logging.trace_level, "Incoming request " + jsonRequest);
 
                 if (typeof jsonRequest != 'object') {
-                    console.log('Bad JSON posted'); //redirect this somewhere, implement different logging levels and system to handle levels
+                    log(logging.trace_level, 'Bad JSON posted');
                     response.end();
 
                     return;
                 }
             } catch (error) {
-                console.log('Bad JSON posted ' + error); //redirect this somewhere, implement different logging levels and system to handle levels
+                log(logging.trace_level, 'Bad JSON posted ' + error);
                 response.end();
 
                 return;
@@ -145,14 +152,12 @@ var server = http.createServer((request, response) => {
             jsonInputs = jsonRequest;
             httpResponse = response;
 
-            console.log('received POST');
-            log('received POST');
+            log(logging.trace_level, 'received POST');
             places.blipLookup(jsonInputs.cityID, placeCallback);
         });
     }
     else {
-        console.log('GET');
-        log('received GET');
+        log(logging.trace_level, 'received GET');
         response.writeHead(200, {'Content-Type': 'text/html'});
         response.write(html);
         response.end();
@@ -161,5 +166,5 @@ var server = http.createServer((request, response) => {
 
 // Listen on the earlier defined hostname and port
 server.listen(port, () => {
-    console.log('Server running at http://127.0.0.1:' + port + '/');
+    console.log('Server running on port ' + port);
 });
