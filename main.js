@@ -15,6 +15,7 @@ const places = require('./modules/places.js');
 const googleClient = require('./modules/google_client.js');
 const mySQLClient = require('./modules/mysql_client.js');
 const logging = require('./modules/logging.js');
+const clientSync = require('./modules/client_sync.js');
 
 const oneDayInSeconds = 86400;
 
@@ -27,7 +28,7 @@ var blip;
 
 // Logging Module setup
 const log_file = '/tmp/main.log';
-var module_trace_level = logging.warning_level;
+var module_trace_level = logging.trace_level;
 
 function log (entry_trace_level, entry) {
     logging.log(entry_trace_level, module_trace_level, log_file, entry);
@@ -39,7 +40,7 @@ function setModuleTraceLevel (newLevel) {
 
 var attractionsCallback = (results, callerCallback, callerArgs) => {
     /** MOVE THIS TO ITS OWN JSON MODULE **/
-    /** REALLY, THIS IS UGLY, ESPECIALLY PUSHING BASIC BLIP INFOj **/
+    /** REALLY, THIS IS UGLY, ESPECIALLY PUSHING BASIC BLIP INFO **/
 
     var jsonReply = {};
 
@@ -109,7 +110,18 @@ var placeCallback = (cityName, provinceName, countryName) => {
     blip.push(provinceName);
     blip.push(countryName);
 
+    log(logging.trace_level, 'Place callback with ' + cityName + ' ' + provinceName + ' ' + countryName);
+
     mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
+}
+
+function handleJSONRequest (response, jsonRequest) {
+    if (jsonRequest.requestType == "query") {
+        //TODO - When cleaning up blip lookup, pass response around?
+        places.blipLookup(jsonInputs.cityID, placeCallback);
+    } else if (jsonRequest.requestType == "dbsync") {
+        clientSync.sync(response, jsonRequest);        
+    }
 }
 
 // Create the HTTP server, use JavaScript's JSON parsing to format the client POSTed data
@@ -152,8 +164,9 @@ var server = http.createServer((request, response) => {
             jsonInputs = jsonRequest;
             httpResponse = response;
 
-            log(logging.trace_level, 'received POST');
-            places.blipLookup(jsonInputs.cityID, placeCallback);
+            log(logging.trace_level, 'received POST with requestType ' + jsonInputs.requestType);
+
+            handleJSONRequest(response, jsonInputs);
         });
     }
     else {
