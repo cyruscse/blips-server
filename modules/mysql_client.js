@@ -64,6 +64,10 @@ function schemaSetup() {
 	fs.stat(force_rebuild, function (err, stat) {
 		if (err == null) {
 			logging.log(force_rebuild + " exists, force rebuilding DB");
+			
+			fs.unlink(force_rebuild, function (err) {
+				if (err) logging.log("Failed to delete " + force_rebuild);
+			});
 
 			mySQLConnection.query(dropDBQuery, function (error, results, fields) {
 				logging.log("blips dropped, rebuilding now");
