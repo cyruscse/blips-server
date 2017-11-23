@@ -66,9 +66,6 @@ function buildSchema() {
 /**
  *  schemaSetup() executes all SQL statements in table_definitions to 
  *  have the DB schema ready for SQL queries.
- *
- *  ISSUE (#4): This function doesn't check if the DB is in a good state,
- *	it always drops the DB and rebuilds it. This should be addressed.
  */
 function schemaSetup() {
 	fs.stat(force_rebuild, function (err, stat) {
@@ -103,10 +100,6 @@ function schemaSetup() {
 /**
  *  buildCitiesDatabase() executes the Python script referenced by build_database.
  *	The Python script inserts City, Province and Country rows into the DB.
- *
- *	ISSUE (#4): Like schemaSetup(), this function will always rebuild the DB. This
- *  needs to be addressed in the Python script or here. The call to this function can
- *  also be moved to schemaSetup() and have it only be called if the DB needs to be built.
  */
 function buildCitiesDatabase() {
 	var options = {
