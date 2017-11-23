@@ -27,3 +27,7 @@ create table Blips
 		Longitude float(10, 7) NOT NULL,
 		Rating float
 		);
+
+create table AttractionTypes
+	(ID int AUTO_INCREMENT PRIMARY KEY,
+		Name char(30));

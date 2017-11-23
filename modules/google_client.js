@@ -1,8 +1,11 @@
 const maps = require('@google/maps');
 const Promise = require('promise');
 const mySQLClient = require('./mysql_client.js');
+const placeTypes = require('google-place-types');
 
 const cachedQueryStr = "update City set Updated = (now()) where ID =";
+const blipBulkInsertQueryStr = "insert into Blips values ?";
+const attrTypeBulkInsertQueryStr = "insert into AttractionTypes values ?";
 
 // Google API key for Blips
 var mapsClient = maps.createClient({
@@ -18,12 +21,41 @@ var callerCallback;
 var blipID;
 var city, province, country;
 
+
+// Perform post DB-Setup tasks
+function databaseReadyCallback(emptyDB) {
+	if (emptyDB) {
+		logging.log("Rebuilding Google attraction type table");
+
+		var toInsert = new Array();
+		var types = new Array();
+
+		placeTypes.map(type => types.push(type));
+
+		for (index in types) {
+			var row = new Array();
+
+			row.push("NULL");
+			row.push(types[index]);
+
+			toInsert.push(row);
+		}
+
+		var queryStr = attrTypeBulkInsertQueryStr;
+
+		mySQLClient.bulkInsert(queryStr, toInsert, null);
+	}
+}
+
+mySQLClient.addDBReadyCallback(databaseReadyCallback);
+
 // Queries the Google API for nearby attractions, given a latitude, longitude and attractionType
 // If the API call is successful, the callback function is called with the data returned from the Google API
 var placesNearbyToLocation = (location) => {
     placesRet = mapsClient.placesNearby({ location: location, radius: 500, opennow: true, type: attractionType }).asPromise()
 	    .then ((mapResponse) => {
-	    	dbCachingCallback(mapResponse.json)
+	    	logging.log("placesNearbyToLocation succeeded");
+	    	dbCachingCallback(mapResponse.json);
 	    })
 	    .catch ((err) => {
 	        logging.log(loggingModule.error_level, err);
@@ -37,6 +69,7 @@ var placesNearbyToLocation = (location) => {
 var geocodeLocString = () => {
 	mapsClient.geocode({ address: (city + " " + province + " " + country) }).asPromise()
         .then ((mapResponse) => {
+        	logging.log("geocodeLocString successful");
         	placesNearbyToLocation(mapResponse.json.results[0].geometry.location);
         })
         .catch ((err) => {
@@ -58,6 +91,8 @@ var setCachedTime = () => {
 var dbCachingCallback = (apiResponse) => {
 	var toInsert = new Array();
 
+	logging.log("db caching callback with length " + apiResponse.results.length);
+
 	if (apiResponse.results.length == 0) {
 		return;
 	}
@@ -71,12 +106,17 @@ var dbCachingCallback = (apiResponse) => {
 		row.push(apiResponse.results[i].name);
 		row.push(apiResponse.results[i].geometry.location.lat);
 		row.push(apiResponse.results[i].geometry.location.lng);
-		row.push(apiResponse.results[i].rating);
+		
+		if (apiResponse.results[i].rating != null) {
+			row.push(apiResponse.results[i].rating);
+		} else {
+			row.push("0");
+		}
 
 		toInsert.push(row);
 	}
 
-	var queryStr = "insert into Blips values ?";
+	var queryStr = blipBulkInsertQueryStr;
 
 	mySQLClient.bulkInsert(queryStr, toInsert, setCachedTime);
 }
@@ -88,6 +128,8 @@ exports.cacheLocationWithType = (cityStr, provinceStr, countryStr, BID, type, ca
 	province = provinceStr;
 	country = countryStr;
 	blipID = BID;
+
+	logging.log("caching call on city" + city + " BID " + blipID);
 
 	geocodeLocString();
 }

@@ -11,12 +11,14 @@ const dbname = 'blips';
 // Scripts required for initial DB build
 const table_definitions = "dbsetup/table_definitions.sql";
 const build_database = "dbsetup/build_cities_database.py";
+const force_rebuild = "dbsetup/force_rebuild";
 
 // Common queries
 const lastModTimeQuery = "select Updated from City where Name = ";
 const unixTimestampQuery = "select UNIX_TIMESTAMP ";
 const tableRowCountQuery = "select count(*) from Blips ";
 const blipsDbExistsQuery = "use blips"
+const dropDBQuery = "drop database blips";
 
 /*****************************************************
  **													**
@@ -27,6 +29,7 @@ const blipsDbExistsQuery = "use blips"
 // Logging setup
 var loggingModule = require('./logging.js');
 var logging = new loggingModule('mysql_client', loggingModule.trace_level);
+var databaseReadyCallbacks = [];
 
 var mySQLConnection = mysql.createConnection({
     host      : hostname,
@@ -58,14 +61,28 @@ function buildSchema() {
  *	it always drops the DB and rebuilds it. This should be addressed.
  */
 function schemaSetup() {
-	mySQLConnection.query(blipsDbExistsQuery, function (error, results, fields) {
-		if (error) {
-			console.log("DB schema missing, rebuilding basic DB");
-			buildSchema();
-			return;
-		}
+	fs.stat(force_rebuild, function (err, stat) {
+		if (err == null) {
+			logging.log(force_rebuild + " exists, force rebuilding DB");
 
-		console.log("DB Schema exists, not rebuilding");
+			mySQLConnection.query(dropDBQuery, function (error, results, fields) {
+				logging.log("blips dropped, rebuilding now");
+				buildSchema();
+			});
+		}
+		else {
+			mySQLConnection.query(blipsDbExistsQuery, function (error, results, fields) {
+				if (error) {
+					logging.log("DB schema missing, rebuilding basic DB");
+
+					buildSchema();
+					return;
+				}
+
+				logging.log("DB Schema exists, not rebuilding");
+				notifyReadyListeners(false);
+			});
+		}
 	});
 }
 
@@ -88,6 +105,14 @@ function buildCitiesDatabase() {
 		if (error) throw error;
 
 		logging.log(loggingModule.trace_level, results);
+		notifyReadyListeners(true);
+	});
+}
+
+// Note: This is an observer pattern, good to show in a UML diagram
+function notifyReadyListeners(rebuildDB) {
+	databaseReadyCallbacks.forEach(function(callback) {
+		callback(rebuildDB);
 	});
 }
 
@@ -127,7 +152,9 @@ exports.bulkInsert = (queryStr, values, callback) => {
 	mySQLConnection.query(queryStr, [values], function (error) {
 		if (error) throw error;
 
-		callback();
+		if (callback != null) {
+			callback();
+		}
 	});
 }
 
@@ -185,4 +212,8 @@ exports.getBlipLastModifiedTime = (cityStr, callback) => {
 			callback(results[0][key]);
 		});
 	});
+}
+
+exports.addDBReadyCallback = (callback) => {
+	databaseReadyCallbacks.push(callback);
 }
