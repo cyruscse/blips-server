@@ -1,6 +1,7 @@
 const mysql = require('mysql');
 const fs = require('fs');
 const pythonshell = require('python-shell');
+const logging = require('./logging.js');
 
 // AWS RDS MySQL server settings
 const hostname = 'aa5icva8ezh544.crnuwmhdforv.us-east-2.rds.amazonaws.com';
@@ -26,9 +27,18 @@ const dropDBQuery = "drop database blips";
  **													**
  *****************************************************/
 
-// Logging setup
-var loggingModule = require('./logging.js');
-var logging = new loggingModule('mysql_client', loggingModule.trace_level);
+// Logging Module setup
+const log_file = '/tmp/mysql_client.log';
+var module_trace_level = logging.warning_level;
+
+function log (entry_trace_level, entry) {
+    logging.log(entry_trace_level, module_trace_level, log_file, entry);
+}
+
+function setModuleTraceLevel (newLevel) {
+    module_trace_level = newLevel;
+}
+
 var databaseReadyCallbacks = [];
 
 var mySQLConnection = mysql.createConnection({
@@ -63,27 +73,27 @@ function buildSchema() {
 function schemaSetup() {
 	fs.stat(force_rebuild, function (err, stat) {
 		if (err == null) {
-			logging.log(force_rebuild + " exists, force rebuilding DB");
+			log(logging.warning_level, force_rebuild + " exists, force rebuilding DB");
 			
 			fs.unlink(force_rebuild, function (err) {
-				if (err) logging.log("Failed to delete " + force_rebuild);
+				if (err) log(logging.critical_level, "Failed to delete " + force_rebuild);
 			});
 
 			mySQLConnection.query(dropDBQuery, function (error, results, fields) {
-				logging.log("blips dropped, rebuilding now");
+				log(logging.warning_level, "blips dropped, rebuilding now");
 				buildSchema();
 			});
 		}
 		else {
 			mySQLConnection.query(blipsDbExistsQuery, function (error, results, fields) {
 				if (error) {
-					logging.log("DB schema missing, rebuilding basic DB");
+					log(logging.critical_level, "DB schema missing, rebuilding basic DB");
 
 					buildSchema();
 					return;
 				}
 
-				logging.log("DB Schema exists, not rebuilding");
+				log(logging.warning_level, "DB Schema exists, not rebuilding");
 				notifyReadyListeners(false);
 			});
 		}
@@ -108,7 +118,7 @@ function buildCitiesDatabase() {
 	pythonshell.run(build_database, options, function (error, results) {
 		if (error) throw error;
 
-		logging.log(loggingModule.trace_level, results);
+		log(logging.trace_level, results);
 		notifyReadyListeners(true);
 	});
 }
@@ -136,7 +146,7 @@ schemaSetup();
  *  a second callback function that can be called later on.
  */
 exports.queryAndCallback = (queryStr, queryCallback, callerCallback, queryArgs) => {
-	logging.log(loggingModule.trace_level, "queryAndCallback " + queryStr);
+	log(logging.trace_level, "queryAndCallback " + queryStr);
 
 	mySQLConnection.query(queryStr, function (error, results, fields) {
 		if (error) throw error;
@@ -151,7 +161,7 @@ exports.queryAndCallback = (queryStr, queryCallback, callerCallback, queryArgs) 
  *  the given callback function is called.
  */
 exports.bulkInsert = (queryStr, values, callback) => {
-	logging.log(loggingModule.trace_level, "bulkInsert " + queryStr);
+	log(logging.trace_level, "bulkInsert " + queryStr);
 
 	mySQLConnection.query(queryStr, [values], function (error) {
 		if (error) throw error;
@@ -178,7 +188,7 @@ exports.escape = (string) => {
 exports.tableRowCount = (blipID, callback) => {
 	var queryStr = tableRowCountQuery + " where BID = " + blipID;
 
-	logging.log(loggingModule.trace_level, "tableRowCount " + blipID + " " + queryStr);
+	log(logging.trace_level, "tableRowCount " + blipID + " " + queryStr);
 
 	mySQLConnection.query(queryStr, function (error, results, fields) {
 		if (error) throw error;
@@ -199,14 +209,14 @@ exports.tableRowCount = (blipID, callback) => {
 exports.getBlipLastModifiedTime = (cityStr, callback) => {
 	var queryStr = lastModTimeQuery + mySQLConnection.escape(cityStr);
 
-	logging.log(loggingModule.trace_level, "getBlipLastModifiedTime " + queryStr);
+	log(logging.trace_level, "getBlipLastModifiedTime " + queryStr);
 
 	mySQLConnection.query(queryStr, function (error, results, fields) {
 		if (error) throw error;
 
 		var queryStr = unixTimestampQuery + "(" + mySQLConnection.escape(results[0].Updated) + ")";
 
-		logging.log(loggingModule.trace_level, "getBlipLastModifiedTime nested " + queryStr);
+		log(logging.trace_level, "getBlipLastModifiedTime nested " + queryStr);
 
 		mySQLConnection.query(queryStr, function (error, results, fields) {
 			if (error) throw error;

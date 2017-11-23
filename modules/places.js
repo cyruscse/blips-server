@@ -1,17 +1,27 @@
 const mySQLClient = require('./mysql_client.js');
-
-var loggingModule = require('./logging.js');
-var logging = new loggingModule('places', loggingModule.trace_level);
+const logging = require('./logging.js');
 
 // SQL query constant strings
 const cityQuery = "select * from City where ID = ";
 const provinceQuery = "select * from Province where ID = ";
 const countryQuery = "select * from Country where ID = ";
 
+// Logging Module setup
+const log_file = '/tmp/places.log';
+var module_trace_level = logging.warning_level;
+
+function log (entry_trace_level, entry) {
+    logging.log(entry_trace_level, module_trace_level, log_file, entry);
+}
+
+function setModuleTraceLevel (newLevel) {
+    module_trace_level = newLevel;
+}
+
 var countryLookupCallback = (results, callback, args) => {
 	args[0].push(results[0].Name);
 
-	logging.log(loggingModule.trace_level, "place lookup complete " + args[0][0] + " " + args[0][1] + " " + args[0][2]);
+	log(logging.trace_level, "place lookup complete " + args[0][0] + " " + args[0][1] + " " + args[0][2]);
 
 	callback(args[0][0], args[0][1], args[0][2]);
 }

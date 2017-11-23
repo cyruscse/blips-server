@@ -11,27 +11,31 @@ var port = process.env.PORT || 3000,
     promise = require('promise'),
     html = fs.readFileSync('index.html');
 
-// Places queries the SQL database for the given Blip ID, provides city, province, and country names
 const places = require('./modules/places.js');
-
-// GoogleClient queries the Google Maps and Places API for exact latitude/longitude for a blip, then
-// gets nearby attractions (which can be filtered by attraction type)
 const googleClient = require('./modules/google_client.js');
-
 const mySQLClient = require('./modules/mysql_client.js');
+const logging = require('./modules/logging.js');
 
 const oneDayInSeconds = 86400;
 
 // Response that goes back to POSTing client
 var httpResponse;
-
 // Inputs from client
 var jsonInputs;
 
 var blip;
 
-var loggingModule = require('./modules/logging.js');
-var logging = new loggingModule('main', loggingModule.trace_level);
+// Logging Module setup
+const log_file = '/tmp/main.log';
+var module_trace_level = logging.warning_level;
+
+function log (entry_trace_level, entry) {
+    logging.log(entry_trace_level, module_trace_level, log_file, entry);
+}
+
+function setModuleTraceLevel (newLevel) {
+    module_trace_level = newLevel;
+}
 
 var attractionsCallback = (results, callerCallback, callerArgs) => {
     /** MOVE THIS TO ITS OWN JSON MODULE **/
@@ -63,7 +67,7 @@ var attractionsCallback = (results, callerCallback, callerArgs) => {
 
     jsonReply = JSON.stringify(jsonReply);
 
-    logging.log(loggingModule.trace_level, "Responding with " + jsonReply);
+    log(logging.trace_level, "Responding with " + jsonReply);
     httpResponse.write(jsonReply);
 
     httpResponse.end();
@@ -77,7 +81,7 @@ var blipRecacheCallback = () => {
 
 var tableRowCountCallback = (rowCount) => {
     if (rowCount == 0) {
-        logging.log(loggingModule.info_level, "db empty for blip, cache call for cityID " + jsonInputs.cityID);
+        log(logging.warning_level, "db empty for blip, cache call for cityID " + jsonInputs.cityID);
         googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
     }
     else {
@@ -89,7 +93,7 @@ var blipModTimeCallback = (time) => {
     var currentTimeSeconds = Date.now() / 1000 | 0;
 
     if (currentTimeSeconds > (time + oneDayInSeconds)) {
-        logging.log(loggingModule.info_level, "stale DB (cached at " + time + ", currently " + currentTimeSeconds + ") , cache call for cityID " + jsonInputs.cityID);
+        log(logging.warning_level, "stale DB (cached at " + time + ", currently " + currentTimeSeconds + ") , cache call for cityID " + jsonInputs.cityID);
         googleClient.cacheLocationWithType(blip[0], blip[1], blip[2], jsonInputs.cityID, jsonInputs.type, blipRecacheCallback);
     }
     else {
@@ -129,16 +133,16 @@ var server = http.createServer((request, response) => {
             try {
                 jsonRequest = JSON.parse(body);
 
-                logging.log(loggingModule.trace_level, "Incoming request " + jsonRequest);
+                log(logging.trace_level, "Incoming request " + jsonRequest);
 
                 if (typeof jsonRequest != 'object') {
-                    logging.log(loggingModule.trace_level, 'Bad JSON posted');
+                    log(logging.trace_level, 'Bad JSON posted');
                     response.end();
 
                     return;
                 }
             } catch (error) {
-                logging.log(loggingModule.trace_level, 'Bad JSON posted ' + error);
+                log(logging.trace_level, 'Bad JSON posted ' + error);
                 response.end();
 
                 return;
@@ -148,12 +152,12 @@ var server = http.createServer((request, response) => {
             jsonInputs = jsonRequest;
             httpResponse = response;
 
-            logging.log(loggingModule.trace_level, 'received POST');
+            log(logging.trace_level, 'received POST');
             places.blipLookup(jsonInputs.cityID, placeCallback);
         });
     }
     else {
-        logging.log(loggingModule.trace_level, 'received GET');
+        log(logging.trace_level, 'received GET');
         response.writeHead(200, {'Content-Type': 'text/html'});
         response.write(html);
         response.end();

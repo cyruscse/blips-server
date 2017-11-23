@@ -2,6 +2,7 @@ const maps = require('@google/maps');
 const Promise = require('promise');
 const mySQLClient = require('./mysql_client.js');
 const placeTypes = require('google-place-types');
+const logging = require('./logging.js');
 
 const cachedQueryStr = "update City set Updated = (now()) where ID =";
 const blipBulkInsertQueryStr = "insert into Blips values ?";
@@ -13,19 +14,27 @@ var mapsClient = maps.createClient({
     Promise   : Promise
 });
 
-var loggingModule = require('./logging.js');
-var logging = new loggingModule('google_client', loggingModule.trace_level);
-
 var attractionType;
 var callerCallback;
 var blipID;
 var city, province, country;
 
+// Logging Module setup
+const log_file = '/tmp/google_client.log';
+var module_trace_level = logging.warning_level;
+
+function log (entry_trace_level, entry) {
+    logging.log(entry_trace_level, module_trace_level, log_file, entry);
+}
+
+function setModuleTraceLevel (newLevel) {
+    module_trace_level = newLevel;
+}
 
 // Perform post DB-Setup tasks
 function databaseReadyCallback(emptyDB) {
 	if (emptyDB) {
-		logging.log("Rebuilding Google attraction type table");
+		log(logging.warning_level, "Rebuilding Google attraction type table");
 
 		var toInsert = new Array();
 		var types = new Array();
@@ -54,11 +63,11 @@ mySQLClient.addDBReadyCallback(databaseReadyCallback);
 var placesNearbyToLocation = (location) => {
     placesRet = mapsClient.placesNearby({ location: location, radius: 500, opennow: true, type: attractionType }).asPromise()
 	    .then ((mapResponse) => {
-	    	logging.log("placesNearbyToLocation succeeded");
+	    	log(logging.trace_level, "placesNearbyToLocation succeeded");
 	    	dbCachingCallback(mapResponse.json);
 	    })
 	    .catch ((err) => {
-	        logging.log(loggingModule.error_level, err);
+	        log(logging.error_level, err);
 	    });
 }
 
@@ -69,11 +78,11 @@ var placesNearbyToLocation = (location) => {
 var geocodeLocString = () => {
 	mapsClient.geocode({ address: (city + " " + province + " " + country) }).asPromise()
         .then ((mapResponse) => {
-        	logging.log("geocodeLocString successful");
+        	log(logging.trace_level, "geocodeLocString successful");
         	placesNearbyToLocation(mapResponse.json.results[0].geometry.location);
         })
         .catch ((err) => {
-        	logging.log(loggingModule.error_level, err);
+        	log(logging.error_level, err);
             throw err;
         });
 }
@@ -91,7 +100,7 @@ var setCachedTime = () => {
 var dbCachingCallback = (apiResponse) => {
 	var toInsert = new Array();
 
-	logging.log("db caching callback with length " + apiResponse.results.length);
+	log(logging.trace_level, "db caching callback with length " + apiResponse.results.length);
 
 	if (apiResponse.results.length == 0) {
 		return;
@@ -129,7 +138,7 @@ exports.cacheLocationWithType = (cityStr, provinceStr, countryStr, BID, type, ca
 	country = countryStr;
 	blipID = BID;
 
-	logging.log("caching call on city" + city + " BID " + blipID);
+	log(logging.trace_level, "caching call on city" + city + " BID " + blipID);
 
 	geocodeLocString();
 }
