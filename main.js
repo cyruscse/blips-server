@@ -11,7 +11,6 @@ var port = process.env.PORT || 3000,
     promise = require('promise'),
     html = fs.readFileSync('index.html');
 
-const places = require('./modules/places.js');
 const googleClient = require('./modules/google_client.js');
 const mySQLClient = require('./modules/mysql_client.js');
 const logging = require('./modules/logging.js');
@@ -23,8 +22,6 @@ const oneDayInSeconds = 86400;
 var httpResponse;
 // Inputs from client
 var jsonInputs;
-
-var blip;
 
 // Logging Module setup
 const log_file = '/tmp/main.log';
@@ -38,17 +35,11 @@ function setModuleTraceLevel (newLevel) {
     module_trace_level = newLevel;
 }
 
+/*
 var attractionsCallback = (results, callerCallback, callerArgs) => {
-    /** MOVE THIS TO ITS OWN JSON MODULE **/
-    /** REALLY, THIS IS UGLY, ESPECIALLY PUSHING BASIC BLIP INFO **/
+    // MOVE THIS TO ITS OWN JSON MODULE
 
     var jsonReply = {};
-
-    var data = {
-        city: blip[0],
-        state: blip[1],
-        country: blip[2]
-    };
 
     jsonReply["blip"] = [];
     jsonReply["blip"].push(data);
@@ -114,11 +105,13 @@ var placeCallback = (cityName, provinceName, countryName) => {
 
     mySQLClient.getBlipLastModifiedTime(cityName, blipModTimeCallback);
 }
+*/
 
 function handleJSONRequest (response, jsonRequest) {
     if (jsonRequest.requestType == "query") {
-        //TODO - When cleaning up blip lookup, pass response around?
-        places.blipLookup(jsonInputs.cityID, placeCallback);
+        //TODO - When cleaning up blip lookup, pass httpResponse around, i.e. use clientSync method?
+        //places.blipLookup(jsonInputs.cityID, placeCallback);
+        httpResponse.end()
     } else if (jsonRequest.requestType == "dbsync") {
         clientSync.sync(response, jsonRequest);        
     }
@@ -138,6 +131,7 @@ var server = http.createServer((request, response) => {
         });
 
         request.on('end', function () {
+            // this initial input and JSON handling should be moved
             response.writeHead(200, {'Content-Type': 'text/html'});
 
             var jsonRequest;
@@ -160,7 +154,6 @@ var server = http.createServer((request, response) => {
                 return;
             }
 
-            blip = new Array();
             jsonInputs = jsonRequest;
             httpResponse = response;
 
