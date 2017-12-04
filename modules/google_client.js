@@ -14,9 +14,9 @@ var mapsClient = maps.createClient({
 });
 
 var clientLongitude, clientLatitude;
-var requestedOpenNow;
-var requestedRadius;
-var attractionType;
+var requestedOpenNow = true;
+var requestedRadius = 250;
+var attractionType = "lodging";
 var callerCallback;
 
 // Logging Module setup
@@ -60,15 +60,42 @@ mySQLClient.addDBReadyCallback(databaseReadyCallback);
 
 // Queries the Google API for nearby attractions, given a latitude, longitude and attractionType
 // If the API call is successful, the callback function is called with the data returned from the Google API
-var placesNearbyToLocation = (location) => {
-    placesRet = mapsClient.placesNearby({ location: location, radius: requestedRadius, opennow: requestedOpenNow, type: attractionType }).asPromise()
+exports.placesNearbyToLocation = (location, attractionType, requestedRadius, openNow, callback) => {
+    console.log(location, requestedRadius, openNow, attractionType);
+    mapsClient.placesNearby({ location: location, radius: requestedRadius, opennow: openNow, type: attractionType }).asPromise()
 	    .then ((mapResponse) => {
+	    	console.log("in");
 	    	log(logging.trace_level, "placesNearbyToLocation succeeded");
-	    	dbCachingCallback(mapResponse.json);
+	    	callback(mapResponse.json);
 	    })
 	    .catch ((err) => {
-	        log(logging.error_level, err);
+	    	var str = JSON.stringify(err.json);
+	        log(logging.error_level, str);
 	    });
+}
+
+exports.geocodeLatLng = (location, callback) => {
+	mapsClient.reverseGeocode({ latlng: location }).asPromise()
+		.then ((googleResponse) => {
+			log(logging.trace_level, "geocodeLatLng succeeded");
+			callback(googleResponse.json);
+		})
+		.catch ((err) => {
+			var str = JSON.stringify(err.json);
+	        log(logging.error_level, str);
+		});
+}
+
+exports.geocodeLocation = (locationStr, callback) => {
+	mapsClient.geocode({ address: locationStr }).asPromise()
+		.then ((googleResponse) => {
+			log(logging.trace_level, "geocodeLocation succeeded");
+			callback(googleResponse.json);
+		})
+		.catch ((err) => {
+			var str = JSON.stringify(err.json);
+	        log(logging.error_level, str);
+		});
 }
 
 var cachedReturnCallback = (results, callback, queryArgs) => {
@@ -112,22 +139,4 @@ var dbCachingCallback = (apiResponse) => {
 	var queryStr = blipBulkInsertQueryStr;
 
 	mySQLClient.bulkInsert(queryStr, toInsert, setCachedTime);
-}
-
-exports.cacheLocationWithType = (longitude, latitude, radius, opennow, type, callback) => {
-	clientLongitude = longitude;
-	clientLatitude = latitude;
-	requestedRadius = radius;
-	requestedOpenNow = opennow;
-	attractionType = type;
-	callerCallback = callback;
-
-	log(logging.trace_level, "caching call on for lng" + clientLongitude + " lat " + clientLatitude);
-
-	// REPLACE this:
-	//geocodeLocString();
-
-	// with (wrap up clientLongitude and clientLatitude to clientLocation, follow google formatting):
-	// clientLocation doesn't need to be global
-	//placesNearbyToLocation(mapResponse.json.results[0].geometry.location);
 }

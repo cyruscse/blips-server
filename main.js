@@ -1,9 +1,4 @@
-/**
- * Main creates and listens on the pre-defined hostname and port
- * When a client POSTs a JSON file containing a BlipID and attraction type, uses
- * the Place and GoogleClient modules to query the SQL database and call the Google API to get
- * information on a Blip
- */
+// need new module description
 
 var port = process.env.PORT || 3000,
     http = require('http'),
@@ -15,6 +10,7 @@ const googleClient = require('./modules/google_client.js');
 const mySQLClient = require('./modules/mysql_client.js');
 const logging = require('./modules/logging.js');
 const clientSync = require('./modules/client_sync.js');
+const queryRequest = require('./modules/query_request.js');
 
 const oneDayInSeconds = 86400;
 
@@ -109,9 +105,8 @@ var placeCallback = (cityName, provinceName, countryName) => {
 
 function handleJSONRequest (response, jsonRequest) {
     if (jsonRequest.requestType == "query") {
-        //TODO - When cleaning up blip lookup, pass httpResponse around, i.e. use clientSync method?
-        //places.blipLookup(jsonInputs.cityID, placeCallback);
-        httpResponse.end()
+        queryRequest.query(response, jsonRequest);
+
     } else if (jsonRequest.requestType == "dbsync") {
         clientSync.sync(response, jsonRequest);        
     }
@@ -170,7 +165,6 @@ var server = http.createServer((request, response) => {
     }
 });
 
-// Listen on the earlier defined hostname and port
 server.listen(port, () => {
     console.log('Server running on port ' + port);
 });

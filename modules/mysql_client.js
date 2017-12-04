@@ -15,7 +15,7 @@ const table_definitions = "dbsetup/table_definitions.sql";
 const force_rebuild = "dbsetup/force_rebuild";
 
 // Common queries
-const tableRowCountQuery = "select * from ";
+const lastModTimeQuery = "select * from ";
 const unixTimestampQuery = "select UNIX_TIMESTAMP ";
 const tableRowCountQuery = "select count(*) from Blips ";
 const blipsDbExistsQuery = "use blips"
@@ -29,7 +29,7 @@ const dropDBQuery = "drop database blips";
 
 // Logging Module setup
 const log_file = '/tmp/mysql_client.log';
-var module_trace_level = logging.warning_level;
+var module_trace_level = logging.trace_level;
 
 function log (entry_trace_level, entry) {
     logging.log(entry_trace_level, module_trace_level, log_file, entry);
@@ -117,13 +117,13 @@ schemaSetup();
  *  that it will call if the SQL query was successful, and optionally, a reference to
  *  a second callback function that can be called later on.
  */
-exports.queryAndCallback = (queryStr, queryCallback, callerCallback, queryArgs) => {
+exports.queryAndCallback = (queryStr, queryCallback) => {
 	log(logging.trace_level, "queryAndCallback " + queryStr);
 
 	mySQLConnection.query(queryStr, function (error, results, fields) {
 		if (error) throw error;
 
-		queryCallback(results, callerCallback, queryArgs);
+		queryCallback(results);
 	});
 }
 
@@ -157,7 +157,7 @@ exports.escape = (string) => {
  *  Call the callback function with the result.
  */
 exports.tableRowCount = (tableName, countColumn, columnValue, callback) => {
-	var queryStr = tableRowCountQuery + tableName + " where " + countColumn + " = " + columnValue;
+	let queryStr = tableRowCountQuery + tableName + " where " + countColumn + " = " + columnValue;
 
 	log(logging.trace_level, "tableRowCount on table " + tableName + ", counting column " + countColumn + " with value " + columnValue);
 	log(logging.trace_level, "QueryStr: " + queryStr);
@@ -165,40 +165,23 @@ exports.tableRowCount = (tableName, countColumn, columnValue, callback) => {
 	mySQLConnection.query(queryStr, function(error, results, fields) {
 		if (error) throw error;
 
-		var key = (Object.keys(results[0])[0]);
+		let key = (Object.keys(results[0])[0]);
 
 		callback(results[0][key]);
 	});
 }
 
-/**
- *  Given the name of a City, check the last time that its Blips were cached.
- *  Call the callback function with the result.
- *
- *  TODO: This function should be in places.js instead (the SQL queries should be removed,
- *  and instead call this module's queryAndCallback function)
- *
- *  TODO2: Figure out what to do with this method now that places has been removed
- */
-exports.getBlipLastModifiedTime = (cityStr, callback) => {
-	var queryStr = lastModTimeQuery + mySQLConnection.escape(cityStr);
+exports.getUnixTimestamp = (timestamp, callback) => {
+	let queryStr = unixTimestampQuery + "(" + mySQLConnection.escape(timestamp) + ")";
 
-	log(logging.trace_level, "getBlipLastModifiedTime " + queryStr);
+	log(logging.trace_level, "getUnixTimestamp " + queryStr);
 
 	mySQLConnection.query(queryStr, function (error, results, fields) {
 		if (error) throw error;
 
-		var queryStr = unixTimestampQuery + "(" + mySQLConnection.escape(results[0].Updated) + ")";
+		let key = (Object.keys(results[0])[0]);
 
-		log(logging.trace_level, "getBlipLastModifiedTime nested " + queryStr);
-
-		mySQLConnection.query(queryStr, function (error, results, fields) {
-			if (error) throw error;
-
-			var key = (Object.keys(results[0])[0]);
-
-			callback(results[0][key]);
-		});
+		callback(results[0][key]);
 	});
 }
 
