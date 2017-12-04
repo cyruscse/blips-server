@@ -60,18 +60,31 @@ mySQLClient.addDBReadyCallback(databaseReadyCallback);
 
 // Queries the Google API for nearby attractions, given a latitude, longitude and attractionType
 // If the API call is successful, the callback function is called with the data returned from the Google API
-exports.placesNearbyToLocation = (location, attractionType, requestedRadius, openNow, callback) => {
-    console.log(location, requestedRadius, openNow, attractionType);
-    mapsClient.placesNearby({ location: location, radius: requestedRadius, opennow: openNow, type: attractionType }).asPromise()
-	    .then ((mapResponse) => {
-	    	console.log("in");
-	    	log(logging.trace_level, "placesNearbyToLocation succeeded");
-	    	callback(mapResponse.json);
-	    })
-	    .catch ((err) => {
-	    	var str = JSON.stringify(err.json);
-	        log(logging.error_level, str);
-	    });
+exports.placesNearbyToLocation = (location, attractionType, requestedRadius, openNow, nextPageToken, callback) => {
+    if (nextPageToken.length != 0) {
+    	mapsClient.placesNearby({ location: location, pagetoken: nextPageToken }).asPromise()
+    		.then ((mapResponse) => {
+    			var str = JSON.stringify(mapResponse.json);
+    			log(logging.trace_level, str);
+    			callback(mapResponse.json);
+    		})
+    		.catch ((err) => {
+    			var str = JSON.stringify(err.json);
+    			log(logging.error_level, str);
+    		});
+    }
+    else {
+	    mapsClient.placesNearby({ location: location, radius: requestedRadius, opennow: openNow, type: attractionType, pagetoken: nextPageToken }).asPromise()
+		    .then ((mapResponse) => {
+		    	var str = JSON.stringify(mapResponse.json);
+		    	log(logging.trace_level, str);
+		    	callback(mapResponse.json);
+		    })
+		    .catch ((err) => {
+		    	var str = JSON.stringify(err.json);
+		        log(logging.error_level, str);
+		    });
+    }
 }
 
 exports.geocodeLatLng = (location, callback) => {
