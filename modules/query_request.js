@@ -15,6 +15,7 @@ function setModuleTraceLevel (newLevel) {
 }
 
 const blipBulkInsertQueryStr = "insert into Blips values ?";
+const blipQuery = "select * from Blips where ";
 const locationCacheQuery = "select * from LocationCache where ";
 const locationCacheInsert = "insert into LocationCache values (";
 const blipCacheClear  = "delete from Blips where BID = "
@@ -58,8 +59,41 @@ function deg2rad (deg) {
 	return deg * (Math.PI / 180);
 }
 
-function placeLookupComplete () {
+function blipLookupCallback (results) {
+	var jsonReply = {};
+	var numberResults = 0;
+
+	for (i = 0; i < results.length; i++) {
+		let distanceFromClient = distance(results[i].Latitude, results[i].Longitude, clientRequest.latitude, clientRequest.longitude);
+
+		if (distanceFromClient <= clientRequest.radius) {
+			var data = {
+				name: results[i].Name,
+				latitude: results[i].Latitude,
+				longitude: results[i].Longitude
+			};
+
+			console.log("Push to " + numberResults);
+
+			jsonReply[numberResults] = data;
+			numberResults++;
+		}
+	}
+
+	console.log(jsonReply);
+	jsonReply = JSON.stringify(jsonReply);
+	console.log(jsonReply);
+
+	log(logging.trace_level, "Responding with " + jsonReply);
+	response.write(jsonReply);
+
 	response.end();
+}
+
+function placeLookupComplete () {
+	let queryStr = blipQuery + "LCID = " + lcID;
+
+	mySQLClient.queryAndCallback(queryStr, blipLookupCallback);
 }
 
 function placesNearbyCallback (jsonReply) {
@@ -226,7 +260,7 @@ exports.query = (httpResponse, jsonRequest) => {
 	response = httpResponse;
 	clientRequest = jsonRequest;
 
-	let location = [jsonRequest.longitude, jsonRequest.latitude];
+	let location = [jsonRequest.latitude, jsonRequest.longitude];
 
 	googleClient.geocodeLatLng(location, geocodeLatLngCallback);
 }
