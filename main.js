@@ -1,4 +1,9 @@
-// need new module description
+/**
+ * Create HTTP server, and receive JSON inputs from clients.
+ *
+ * Determine which module should handle the request and hand off all responsibility to
+ * the selected module.
+ **/
 
 var port = process.env.PORT || 3000,
     http = require('http'),
@@ -30,6 +35,7 @@ function setModuleTraceLevel (newLevel) {
     module_trace_level = newLevel;
 }
 
+// Hand off response handling to the appropriate module
 function handleJSONRequest (response, jsonRequest) {
     if (jsonRequest.requestType == "query") {
         queryRequest.query(response, jsonRequest);
@@ -40,7 +46,6 @@ function handleJSONRequest (response, jsonRequest) {
 }
 
 // Create the HTTP server, use JavaScript's JSON parsing to format the client POSTed data
-// Currently calls the Place blipLookup function
 var server = http.createServer((request, response) => {
     response.statusCode = 200;
     response.setHeader('Content-Type', 'text/plain');

@@ -8,7 +8,6 @@ const logging = require('./logging.js');
 const hostname = 'aa5icva8ezh544.crnuwmhdforv.us-east-2.rds.amazonaws.com';
 const dbuser = 'blips';
 const dbpass = 'passpass';
-const dbname = 'blips';
 
 // Scripts required for initial DB build
 const table_definitions = "dbsetup/table_definitions.sql";
@@ -47,6 +46,10 @@ var mySQLConnection = mysql.createConnection({
     password  : dbpass,
 });
 
+/**
+ * If the database schema must be rebuilt, read the file containing the schema
+ * and recreate the schema.
+ **/
 function buildSchema() {
 	sqlSchema = fs.readFileSync(table_definitions, "utf-8").split(";");
 
