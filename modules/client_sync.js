@@ -44,7 +44,6 @@ function reply() {
 
 function attractionTypeCallback(results) {
 	attractionTypes = results;
-	console.log(results);
 
 	reply();
 }

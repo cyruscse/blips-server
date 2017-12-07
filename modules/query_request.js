@@ -66,8 +66,6 @@ function blipLookupCallback (results) {
 	for (i = 0; i < results.length; i++) {
 		let distanceFromClient = distance(results[i].Latitude, results[i].Longitude, clientRequest.latitude, clientRequest.longitude);
 
-		console.log(distanceFromClient + " " + clientRequest.radius);
-
 		if (distanceFromClient <= clientRequest.radius) {
 			var data = {
 				name: results[i].Name,
@@ -75,16 +73,12 @@ function blipLookupCallback (results) {
 				longitude: results[i].Longitude
 			};
 
-			console.log("Push to " + numberResults);
-
 			jsonReply[numberResults] = data;
 			numberResults++;
 		}
 	}
 
-	console.log(jsonReply);
 	jsonReply = JSON.stringify(jsonReply);
-	console.log(jsonReply);
 
 	log(logging.trace_level, "Responding with " + jsonReply);
 	response.write(jsonReply);
