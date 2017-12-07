@@ -47,6 +47,9 @@ var clientCityLng;			 // Longitude of center of client's city
 var clientCityRadius;		 // Radius from city center to city limits
 var clientRequest;			 // Client's JSON request
 var clientCity;				 // Client's city name
+var clientCurrentType = 0;
+
+var jsonReply = {};
 
 /**
  * Calculate distance between two lat/lng points
@@ -71,6 +74,17 @@ function deg2rad (deg) {
 	return deg * (Math.PI / 180);
 }
 
+function writeResponse () {
+	jsonReply = JSON.stringify(jsonReply);
+
+	log(logging.trace_level, "Responding with " + jsonReply);
+	response.write(jsonReply);
+
+	console.log(jsonReply);
+
+	response.end();
+}
+
 /**
  * Callback for mysql_client Blips query
  *
@@ -79,8 +93,9 @@ function deg2rad (deg) {
  * Write the JSON response to the client's httpResponse and send it back to the client.
  **/
 function blipLookupCallback (results) {
-	var jsonReply = {};
-	var numberResults = 0;
+	var numberResults = Object.keys(jsonReply).length;
+	console.log("num results so far " + numberResults);
+	console.log("clientCurrentType " + clientCurrentType + " types length " + clientRequest.types.length);
 
 	for (i = 0; i < results.length; i++) {
 		let distanceFromClient = distance(results[i].Latitude, results[i].Longitude, clientRequest.latitude, clientRequest.longitude);
@@ -97,12 +112,14 @@ function blipLookupCallback (results) {
 		}
 	}
 
-	jsonReply = JSON.stringify(jsonReply);
-
-	log(logging.trace_level, "Responding with " + jsonReply);
-	response.write(jsonReply);
-
-	response.end();
+	if (clientCurrentType == (clientRequest.types.length - 1)) {
+		writeResponse();
+	}
+	else {
+		clientCity.pop();
+		clientCurrentType++;
+		queryNewType();
+	}
 }
 
 /**
@@ -146,7 +163,7 @@ function placesNearbyCallback (jsonReply) {
 
 		row.push(jsonReply.results[i].id);
 		row.push(lcID);
-		row.push(clientRequest.type);
+		row.push(clientCity[3]);
 		row.push(jsonReply.results[i].name);
 		row.push(jsonReply.results[i].geometry.location.lat);
 		row.push(jsonReply.results[i].geometry.location.lng);
@@ -156,6 +173,8 @@ function placesNearbyCallback (jsonReply) {
 
 	var queryStr = blipBulkInsertQueryStr;
 
+	console.log(queryStr);
+
 	mySQLClient.bulkInsert(queryStr, toInsert, callback);
 }
 
@@ -164,7 +183,7 @@ function pageTokenPlaceQuery () {
 	var npToken = nextPageToken;
 	nextPageToken = "";
 
-	googleClient.placesNearbyToLocation(location, clientRequest.type, clientCityRadius, false, npToken, placesNearbyCallback);
+	googleClient.placesNearbyToLocation(location, clientCity[3], clientCityRadius, false, npToken, placesNearbyCallback);
 }
 
 /**
@@ -173,12 +192,14 @@ function pageTokenPlaceQuery () {
  * Call placesNearbyCallback with the results.
  **/
 function queryPlaces () {
-	log(logging.trace_level, "Getting places on location " + clientCityLat + " " + clientCityLng + " of type " + clientRequest.type + " with radius (in meters) " + clientCityRadius);
+	log(logging.trace_level, "Getting places on location " + clientCityLat + " " + clientCityLng + " of type " + clientCity[3] + " with radius (in meters) " + clientCityRadius);
+
+	console.log("placesNearbyToLocation 2 " + clientCity[3]);
 
 	if (nextPageToken.length == 0) {
 		let location = [clientCityLat, clientCityLng];
 
-		googleClient.placesNearbyToLocation(location, clientRequest.type, clientCityRadius, false, "", placesNearbyCallback);
+		googleClient.placesNearbyToLocation(location, clientCity[3], clientCityRadius, false, "", placesNearbyCallback);
 	}
 	else {
 		setTimeout(pageTokenPlaceQuery, 2000);
@@ -198,7 +219,7 @@ function idCallback (results) {
  * Ask the DB for the ID of the new row and then call idCallback with the results.
  */
 function cacheCreationCallback (results) {
-	let queryStr = locationCacheQuery + "city = \"" + clientCity[0] + "\" and state = \"" + clientCity[1] + "\" and country = \"" + clientCity[2] + "\" and Type = \"" + clientRequest.type + "\"";
+	let queryStr = locationCacheQuery + "city = \"" + clientCity[0] + "\" and state = \"" + clientCity[1] + "\" and country = \"" + clientCity[2] + "\" and Type = \"" + clientCity[3] + "\"";
 
 	mySQLClient.queryAndCallback(queryStr, idCallback);
 }
@@ -223,7 +244,7 @@ function geocodeLocationCallback (jsonReply) {
 	log(logging.trace_level, "City center is " + clientCityLat + ", " + clientCityLng + ", with radius " + clientCityRadius);
 
 	// Set up SQL insertion for new LocationCache row
-	let queryStr = locationCacheInsert + "\"" + clientCity[0] + "\", \"" + clientCity[1] + "\", \"" + clientCity[2] + "\", \"" + clientRequest.type + "\", " + clientCityLat + ", " + clientCityLng + ", " + clientCityRadius + ", (now()), NULL)";
+	let queryStr = locationCacheInsert + "\"" + clientCity[0] + "\", \"" + clientCity[1] + "\", \"" + clientCity[2] + "\", \"" + clientCity[3] + "\", " + clientCityLat + ", " + clientCityLng + ", " + clientCityRadius + ", (now()), NULL)";
 
 	mySQLClient.queryAndCallback(queryStr, cacheCreationCallback);
 }
@@ -288,6 +309,19 @@ function cacheCallback (results) {
 	}
 }
 
+function queryNewType () {
+	//console.log(clientRequest.types[clientCurrentType]);
+	// Check DB if a row exists in LocationCache for the client's city, with the client's requested attraction type
+	let queryStr = locationCacheQuery + "city = \"" + clientCity[0] + "\" and state = \"" + clientCity[1] + "\" and country = \"" + clientCity[2] + "\" and Type = \"" + clientRequest.types[clientCurrentType] + "\"";
+
+	clientCity.push(clientRequest.types[clientCurrentType]);
+
+	console.log(queryStr);
+
+	// Query DB server for LocationCache entry, then call cacheCallback with the results
+	mySQLClient.queryAndCallback(queryStr, cacheCallback);
+}
+
 /**
  * Reverse geocoding callback function for google_client
  *
@@ -325,11 +359,9 @@ function geocodeLatLngCallback (jsonReply) {
 	clientCity.push(state);
 	clientCity.push(country);
 
-	// Check DB if a row exists in LocationCache for the client's city, with the client's requested attraction type
-	let queryStr = locationCacheQuery + "city = \"" + city + "\" and state = \"" + state + "\" and country = \"" + country + "\" and Type = \"" + clientRequest.type + "\"";
+	console.log(clientCity);
 
-	// Query DB server for LocationCache entry, then call cacheCallback with the results
-	mySQLClient.queryAndCallback(queryStr, cacheCallback);
+	queryNewType();
 }
 
 /**
