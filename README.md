@@ -10,13 +10,14 @@ Directory Structure & Contents
 Root
 ./dbsetup - MySQL DB Schema and Python DB Table Generator scripts, these are used on server startup by mysql_client
    - table_definitions.sql - Contains MySQL DB Schema
-   - build_cities_database.py - Inserts values for City, Province, and Country into DB
    - force_rebuild (OPTIONAL) - If this file exists in dbsetup, the server will force rebuild the database (this file doesn't exist normally, must be added manually)
 
 ./modules - Node.JS Modules, server code - interfaces with MySQL database and calls into Google API
-   - google_client.js - Interface to Google Maps and Places API, geocodes Blips from DB and retrieves attractions near a Blip
+   - client_sync.js - On a client DB sync request, reply with information that a client needs from the server to create queries
+   - google_client.js - Provides static functions for all other modules to call into Google API (also sets up attraction type table in DB)
+   - logging.js - Utility functions to redirect logs from each module to separate files
    - mysql_client.js - Interface to MySQL database, performs direct insertions, retrievals, counting, etc. on the Blips DB
-   - places.js - Handles JSON POSTed by Blips clients, asks mysql_client to query the DB for city, province, and country
+   - query_request.js - Handles client query request, gets blips close to client location, filtered by attraction type
 
 ./package.json - Metadata for AWS deployment, sets Node dependencies and defines initial call into Node
 ./main.js - Receives JSON POSTed by Blips clients, interconnects all other modules to return responses to Blips clients 

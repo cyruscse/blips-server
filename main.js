@@ -3,8 +3,7 @@
 var port = process.env.PORT || 3000,
     http = require('http'),
     fs = require('fs'),
-    promise = require('promise'),
-    html = fs.readFileSync('index.html');
+    promise = require('promise');
 
 const googleClient = require('./modules/google_client.js');
 const mySQLClient = require('./modules/mysql_client.js');
@@ -84,12 +83,6 @@ var server = http.createServer((request, response) => {
 
             handleJSONRequest(response, jsonInputs);
         });
-    }
-    else {
-        log(logging.trace_level, 'received GET');
-        response.writeHead(200, {'Content-Type': 'text/html'});
-        response.write(html);
-        response.end();
     }
 });
 

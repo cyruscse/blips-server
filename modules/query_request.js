@@ -13,7 +13,7 @@ function log (entry_trace_level, entry) {
 function setModuleTraceLevel (newLevel) {
     module_trace_level = newLevel;
 }
-
+// finish comments......
 const blipBulkInsertQueryStr = "insert into Blips values ?";
 const blipQuery = "select * from Blips where ";
 const locationCacheQuery = "select * from LocationCache where ";

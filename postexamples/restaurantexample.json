@@ -2,7 +2,7 @@
 	"requestType" : "query", 
 	"latitude"    : "45.4215",
 	"longitude"   : "-75.6972",
-  	"type"        : "restaurant",
+  	"type"        : ["restaurant", "lodging"],
   	"radius"      : "2000",
   	"openNow"     : "true"
 }

@@ -4,6 +4,7 @@ const mySQLClient = require('./mysql_client.js');
 const placeTypes = require('google-place-types');
 const logging = require('./logging.js');
 
+// Frequently used SQL queries
 const blipBulkInsertQueryStr = "insert into Blips values ?";
 const attrTypeBulkInsertQueryStr = "insert into AttractionTypes values ?";
 
@@ -12,12 +13,6 @@ var mapsClient = maps.createClient({
 	key       : 'AIzaSyB0oGuvJF0foOJxAwSj_pxlsLJdijmsoFw',
     Promise   : Promise
 });
-
-var clientLongitude, clientLatitude;
-var requestedOpenNow = true;
-var requestedRadius = 250;
-var attractionType = "lodging";
-var callerCallback;
 
 // Logging Module setup
 const log_file = '/tmp/google_client.log';
@@ -32,6 +27,8 @@ function setModuleTraceLevel (newLevel) {
 }
 
 // Perform post DB-Setup tasks
+// Currently the one task is to get a list attraction types supported by Google
+// and insert them into the DB if the DB is empty
 function databaseReadyCallback(emptyDB) {
 	if (emptyDB) {
 		log(logging.warning_level, "Rebuilding Google attraction type table");
@@ -56,12 +53,16 @@ function databaseReadyCallback(emptyDB) {
 	}
 }
 
+// Set this module as an observer of mysql_client
 mySQLClient.addDBReadyCallback(databaseReadyCallback);
 
-// Queries the Google API for nearby attractions, given a latitude, longitude and attractionType
+// Queries the Google API for nearby attractions, given a latitude, longitude, attractionType and search radius
+// This also handles placesNearby pagination. If placesNearby returns 20 results, there are more results waiting.
+// The API returns a next page token. If the API is called again with this token, it gets the next page of results.
 // If the API call is successful, the callback function is called with the data returned from the Google API
 exports.placesNearbyToLocation = (location, attractionType, requestedRadius, openNow, nextPageToken, callback) => {
     if (nextPageToken.length != 0) {
+  		// Handle next page token
     	mapsClient.placesNearby({ location: location, pagetoken: nextPageToken }).asPromise()
     		.then ((mapResponse) => {
     			var str = JSON.stringify(mapResponse.json);
@@ -87,6 +88,7 @@ exports.placesNearbyToLocation = (location, attractionType, requestedRadius, ope
     }
 }
 
+// Queries Google API for city, province, and country name of given latitude and longitude
 exports.geocodeLatLng = (location, callback) => {
 	mapsClient.reverseGeocode({ latlng: location }).asPromise()
 		.then ((googleResponse) => {
@@ -99,6 +101,7 @@ exports.geocodeLatLng = (location, callback) => {
 		});
 }
 
+// Queries Google API for latitude and longitude of given location (as String)
 exports.geocodeLocation = (locationStr, callback) => {
 	mapsClient.geocode({ address: locationStr }).asPromise()
 		.then ((googleResponse) => {
