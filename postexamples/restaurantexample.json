@@ -3,6 +3,6 @@
 	"latitude"    : "45.4215",
 	"longitude"   : "-75.6972",
   	"type"        : "restaurant",
-  	"radius"      : "400",
+  	"radius"      : "2000",
   	"openNow"     : "true"
 }

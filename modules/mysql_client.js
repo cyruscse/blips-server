@@ -59,6 +59,8 @@ function buildSchema() {
 			if (error) throw error;
 		});
 	}
+
+	notifyReadyListeners(true);
 }
 
 /**

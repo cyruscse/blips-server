@@ -66,6 +66,8 @@ function blipLookupCallback (results) {
 	for (i = 0; i < results.length; i++) {
 		let distanceFromClient = distance(results[i].Latitude, results[i].Longitude, clientRequest.latitude, clientRequest.longitude);
 
+		console.log(distanceFromClient + " " + clientRequest.radius);
+
 		if (distanceFromClient <= clientRequest.radius) {
 			var data = {
 				name: results[i].Name,
