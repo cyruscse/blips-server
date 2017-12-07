@@ -2,31 +2,29 @@ create database blips;
 
 use blips;
 
-create table Country
-	(ID int AUTO_INCREMENT PRIMARY KEY,
-		Name char(25) NOT NULL UNIQUE);
-
-create table Province
-	(ID int AUTO_INCREMENT PRIMARY KEY,
-		Name char(25) NOT NULL,
-		CID int NOT NULL);
-
-create table City
-	(ID int AUTO_INCREMENT PRIMARY KEY,
-		Name char(25) NOT NULL,
-		PID int,
-		CID int NOT NULL,
-		Updated TIMESTAMP NOT NULL);
+create table LocationCache
+	(city char(50) NOT NULL,
+		state char(50),
+		country char(50) NOT NULL,
+		Type char(30) NOT NULL,
+		CenterLat float NOT NULL,
+		CenterLng float NOT NULL,
+		Radius float NOT NULL,
+		CachedTime TIMESTAMP NOT NULL,
+		ID int AUTO_INCREMENT PRIMARY KEY);
 
 create table Blips
 	(ID char(50) PRIMARY KEY,
-		BID int NOT NULL,
-		Type char(100) NOT NULL,
+		LCID int NOT NULL,
+		Type char(30) NOT NULL,
 		Name char(100) NOT NULL,
 		Latitude float(10, 7) NOT NULL,
-		Longitude float(10, 7) NOT NULL,
-		Rating float
-		);
+		Longitude float(10, 7) NOT NULL);
+
+/* Add text reviews to Reviews table */
+create table Reviews
+	(BID char(50) PRIMARY KEY,
+		Rating float);
 
 create table AttractionTypes
 	(ID int AUTO_INCREMENT PRIMARY KEY,

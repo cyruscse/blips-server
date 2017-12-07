@@ -1,5 +1,8 @@
 { 
 	"requestType" : "query", 
-	"cityID"      : 1,
-  	"type"        : "restaurant"
+	"latitude"    : "45.4215",
+	"longitude"   : "-75.6972",
+  	"type"        : "restaurant",
+  	"radius"      : "2000",
+  	"openNow"     : "true"
 }
