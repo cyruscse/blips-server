@@ -155,7 +155,7 @@ function idCallback (results) {
 }
 
 function cacheCreationCallback (results) {
-	let queryStr = locationCacheQuery + "city = \"" + clientCity[0] + "\" and state = \"" + clientCity[1] + "\" and country = \"" + clientCity[2] + "\"";
+	let queryStr = locationCacheQuery + "city = \"" + clientCity[0] + "\" and state = \"" + clientCity[1] + "\" and country = \"" + clientCity[2] + "\" and Type = \"" + clientRequest.type + "\"";
 
 	mySQLClient.queryAndCallback(queryStr, idCallback);
 }
@@ -246,7 +246,7 @@ function geocodeLatLngCallback (jsonReply) {
 	clientCity.push(state);
 	clientCity.push(country);
 
-	let queryStr = locationCacheQuery + "city = \"" + city + "\" and state = \"" + state + "\" and country = \"" + country + "\"";
+	let queryStr = locationCacheQuery + "city = \"" + city + "\" and state = \"" + state + "\" and country = \"" + country + "\" and Type = \"" + clientRequest.type + "\"";
 
 	mySQLClient.queryAndCallback(queryStr, cacheCallback);
 }

@@ -82,8 +82,6 @@ var server = http.createServer((request, response) => {
 
             log(logging.trace_level, 'received POST with requestType ' + jsonInputs.requestType);
 
-            console.log(jsonInputs);
-
             handleJSONRequest(response, jsonInputs);
         });
     }
