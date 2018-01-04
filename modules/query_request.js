@@ -124,7 +124,6 @@ function blipLookupCallback (results) {
 		writeResponse();
 	}
 	else {
-		clientCity.pop();
 		queryNewType();
 	}
 }
