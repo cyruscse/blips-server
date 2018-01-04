@@ -287,7 +287,7 @@ function timeCheckCallback (results) {
  * If a row doesn't exist, results.length will be 0. Call getCacheBounds() to create a new row for LocationCache
  **/
 function cacheCallback (results) {
-	log(logging.trace_level, "Cache callback got " + results.length + " results");
+	log(logging.trace_level, "Cache callback got " + results.length + " results, for clientCity " + clientCity);
 
 	if (results.length == 0) {
 		getCacheBounds();
@@ -321,8 +321,6 @@ function queryNewType () {
  * These are filtered out from the JSON reply and saved in the clientCity array
  **/
 function geocodeLatLngCallback (jsonReply) {
-	log(logging.trace_level, "Google geocode replied: " + jsonReply.results);
-
 	var city, state, country;
 
 	// Filter out city, state, and country

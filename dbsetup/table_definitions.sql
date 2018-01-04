@@ -14,12 +14,13 @@ create table LocationCache
 		ID int AUTO_INCREMENT PRIMARY KEY);
 
 create table Blips
-	(ID char(50) PRIMARY KEY,
+	(ID char(50),
 		LCID int NOT NULL,
 		Type char(30) NOT NULL,
 		Name char(100) NOT NULL,
 		Latitude float(10, 7) NOT NULL,
-		Longitude float(10, 7) NOT NULL);
+		Longitude float(10, 7) NOT NULL,
+		PRIMARY KEY (ID, LCID));
 
 /* Add text reviews to Reviews table */
 create table Reviews
