@@ -49,7 +49,7 @@ var clientCityLng;			 // Longitude of center of client's city
 var clientCityRadius;		 // Radius from city center to city limits
 var clientRequest;			 // Client's JSON request
 var clientCity;				 // Client's city name
-var clientCurrentType = 0;   // Starts at 3, as the clientCity array first contains the city, province, and country names
+var clientCurrentType = 0;
 
 var jsonReply = {};
 
@@ -115,12 +115,16 @@ function blipLookupCallback (results) {
 		}
 	}
 
-	if (clientCurrentType == (clientRequest.types.length - 1)) {
+	clientCurrentType++;
+
+	console.log("type remaining check");
+	console.log("city length " + clientCity.length + " current type + offset " + (clientCurrentType + clientTypeOffset));
+
+	if (clientCity.length == (clientCurrentType + clientTypeOffset)) {
 		writeResponse();
 	}
 	else {
 		clientCity.pop();
-		clientCurrentType++;
 		queryNewType();
 	}
 }
@@ -313,12 +317,10 @@ function cacheCallback (results) {
 }
 
 function queryNewType () {
-	console.log(clientRequest.types[clientCurrentType] + " " + clientCurrentType + " " + clientRequest.types);
-	console.log(clientCity);
-	// Check DB if a row exists in LocationCache for the client's city, with the client's requested attraction type
-	clientCity.push(clientRequest.types[clientCurrentType]);
+	console.log(clientCurrentType + " " + clientCity);
 
-	let queryStr = locationCacheQuery + "city = \"" + clientCity[0] + "\" and state = \"" + clientCity[1] + "\" and country = \"" + clientCity[2] + "\" and Type = \"" + clientRequest.types[clientCurrentType + clientTypeOffset] + "\"";
+	// Check DB if a row exists in LocationCache for the client's city, with the client's requested attraction type
+	let queryStr = locationCacheQuery + "city = \"" + clientCity[0] + "\" and state = \"" + clientCity[1] + "\" and country = \"" + clientCity[2] + "\" and Type = \"" + clientCity[clientCurrentType + clientTypeOffset] + "\"";
 
 	console.log(queryStr);
 
@@ -357,15 +359,21 @@ function geocodeLatLngCallback (jsonReply) {
 		}
 	}
 
+	clientCurrentType = 0;
 	clientCity = new Array();
 
 	clientCity.push(city);
 	clientCity.push(state);
 	clientCity.push(country);
 
-	for (i = 0; i < clientRequest.types.length; i++) {
-		clientCity.push(clientRequest.types[i]);
+	if (Array.isArray(clientRequest.types)) {
+		for (i = 0; i < clientRequest.types.length; i++) {
+			clientCity.push(clientRequest.types[i]);
+		}
 	}
+	else {
+		clientCity.push(clientRequest.types);
+	}	
 
 	console.log(clientCity);
 
