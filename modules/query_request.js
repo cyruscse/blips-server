@@ -68,7 +68,7 @@ function distance (lat1, lng1, lat2, lng2) {
 	let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 	let d = R * c;
 
-	return (d * 100);		//Return in meters
+	return (d * 1000);		//Return in meters
 }
 
 // Convert degrees to radians
