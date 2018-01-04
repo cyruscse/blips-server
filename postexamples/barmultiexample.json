@@ -3,6 +3,6 @@
 	"latitude"    : "40.7101898",
 	"longitude"   : "-74.0079269",
   	"types"       : ["lodging", "bar"],
-  	"radius"      : "400",
+  	"radius"      : "5000",
   	"openNow"     : "true"
 }
