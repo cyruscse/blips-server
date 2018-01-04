@@ -36,6 +36,8 @@ const geocodeCountryFilter = "country";
 
 const oneDayInSeconds = 86400;
 
+const clientTypeOffset = 3;
+
 // Private variables used for querying
 var lcID;                    // Location cache ID, ID for current row in LocationCache table
 var response;                // httpResponse from main, JSON reply is written here and sent back to client
@@ -47,6 +49,9 @@ var clientCityLng;			 // Longitude of center of client's city
 var clientCityRadius;		 // Radius from city center to city limits
 var clientRequest;			 // Client's JSON request
 var clientCity;				 // Client's city name
+var clientCurrentType = 0;
+
+var jsonReply = {};
 
 /**
  * Calculate distance between two lat/lng points
@@ -63,12 +68,21 @@ function distance (lat1, lng1, lat2, lng2) {
 	let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 	let d = R * c;
 
-	return (d * 100);		//Return in meters
+	return (d * 1000);		//Return in meters
 }
 
 // Convert degrees to radians
 function deg2rad (deg) {
 	return deg * (Math.PI / 180);
+}
+
+function writeResponse () {
+	jsonReply = JSON.stringify(jsonReply);
+
+	log(logging.trace_level, "Responding with " + jsonReply);
+	response.write(jsonReply);
+
+	response.end();
 }
 
 /**
@@ -79,8 +93,7 @@ function deg2rad (deg) {
  * Write the JSON response to the client's httpResponse and send it back to the client.
  **/
 function blipLookupCallback (results) {
-	var jsonReply = {};
-	var numberResults = 0;
+	var numberResults = Object.keys(jsonReply).length;
 
 	for (i = 0; i < results.length; i++) {
 		let distanceFromClient = distance(results[i].Latitude, results[i].Longitude, clientRequest.latitude, clientRequest.longitude);
@@ -88,6 +101,7 @@ function blipLookupCallback (results) {
 		if (distanceFromClient <= clientRequest.radius) {
 			var data = {
 				name: results[i].Name,
+				type: results[i].Type,
 				latitude: results[i].Latitude,
 				longitude: results[i].Longitude
 			};
@@ -97,12 +111,14 @@ function blipLookupCallback (results) {
 		}
 	}
 
-	jsonReply = JSON.stringify(jsonReply);
+	clientCurrentType++;
 
-	log(logging.trace_level, "Responding with " + jsonReply);
-	response.write(jsonReply);
-
-	response.end();
+	if (clientCity.length == (clientCurrentType + clientTypeOffset)) {
+		writeResponse();
+	}
+	else {
+		queryNewType();
+	}
 }
 
 /**
@@ -146,7 +162,7 @@ function placesNearbyCallback (jsonReply) {
 
 		row.push(jsonReply.results[i].id);
 		row.push(lcID);
-		row.push(clientRequest.type);
+		row.push(clientCity[clientCurrentType + clientTypeOffset]);
 		row.push(jsonReply.results[i].name);
 		row.push(jsonReply.results[i].geometry.location.lat);
 		row.push(jsonReply.results[i].geometry.location.lng);
@@ -164,7 +180,7 @@ function pageTokenPlaceQuery () {
 	var npToken = nextPageToken;
 	nextPageToken = "";
 
-	googleClient.placesNearbyToLocation(location, clientRequest.type, clientCityRadius, false, npToken, placesNearbyCallback);
+	googleClient.placesNearbyToLocation(location, clientCity[clientCurrentType + clientTypeOffset], clientCityRadius, false, npToken, placesNearbyCallback);
 }
 
 /**
@@ -173,12 +189,12 @@ function pageTokenPlaceQuery () {
  * Call placesNearbyCallback with the results.
  **/
 function queryPlaces () {
-	log(logging.trace_level, "Getting places on location " + clientCityLat + " " + clientCityLng + " of type " + clientRequest.type + " with radius (in meters) " + clientCityRadius);
+	log(logging.trace_level, "Getting places on location " + clientCityLat + " " + clientCityLng + " of type " + clientCity[clientCurrentType + clientTypeOffset] + " with radius (in meters) " + clientCityRadius);
 
 	if (nextPageToken.length == 0) {
 		let location = [clientCityLat, clientCityLng];
 
-		googleClient.placesNearbyToLocation(location, clientRequest.type, clientCityRadius, false, "", placesNearbyCallback);
+		googleClient.placesNearbyToLocation(location, clientCity[clientCurrentType + clientTypeOffset], clientCityRadius, false, "", placesNearbyCallback);
 	}
 	else {
 		setTimeout(pageTokenPlaceQuery, 2000);
@@ -198,7 +214,7 @@ function idCallback (results) {
  * Ask the DB for the ID of the new row and then call idCallback with the results.
  */
 function cacheCreationCallback (results) {
-	let queryStr = locationCacheQuery + "city = \"" + clientCity[0] + "\" and state = \"" + clientCity[1] + "\" and country = \"" + clientCity[2] + "\" and Type = \"" + clientRequest.type + "\"";
+	let queryStr = locationCacheQuery + "city = \"" + clientCity[0] + "\" and state = \"" + clientCity[1] + "\" and country = \"" + clientCity[2] + "\" and Type = \"" + clientCity[clientCurrentType + clientTypeOffset] + "\"";
 
 	mySQLClient.queryAndCallback(queryStr, idCallback);
 }
@@ -223,7 +239,7 @@ function geocodeLocationCallback (jsonReply) {
 	log(logging.trace_level, "City center is " + clientCityLat + ", " + clientCityLng + ", with radius " + clientCityRadius);
 
 	// Set up SQL insertion for new LocationCache row
-	let queryStr = locationCacheInsert + "\"" + clientCity[0] + "\", \"" + clientCity[1] + "\", \"" + clientCity[2] + "\", \"" + clientRequest.type + "\", " + clientCityLat + ", " + clientCityLng + ", " + clientCityRadius + ", (now()), NULL)";
+	let queryStr = locationCacheInsert + "\"" + clientCity[0] + "\", \"" + clientCity[1] + "\", \"" + clientCity[2] + "\", \"" + clientCity[clientCurrentType + clientTypeOffset] + "\", " + clientCityLat + ", " + clientCityLng + ", " + clientCityRadius + ", (now()), NULL)";
 
 	mySQLClient.queryAndCallback(queryStr, cacheCreationCallback);
 }
@@ -271,7 +287,7 @@ function timeCheckCallback (results) {
  * If a row doesn't exist, results.length will be 0. Call getCacheBounds() to create a new row for LocationCache
  **/
 function cacheCallback (results) {
-	log(logging.trace_level, "Cache callback got " + results.length + " results");
+	log(logging.trace_level, "Cache callback got " + results.length + " results, for clientCity " + clientCity);
 
 	if (results.length == 0) {
 		getCacheBounds();
@@ -288,6 +304,16 @@ function cacheCallback (results) {
 	}
 }
 
+function queryNewType () {
+	// Check DB if a row exists in LocationCache for the client's city, with the client's requested attraction type
+	let queryStr = locationCacheQuery + "city = \"" + clientCity[0] + "\" and state = \"" + clientCity[1] + "\" and country = \"" + clientCity[2] + "\" and Type = \"" + clientCity[clientCurrentType + clientTypeOffset] + "\"";
+
+	log(logging.trace_level, "Checking LocationCache with query " + queryStr); 
+
+	// Query DB server for LocationCache entry, then call cacheCallback with the results
+	mySQLClient.queryAndCallback(queryStr, cacheCallback);
+}
+
 /**
  * Reverse geocoding callback function for google_client
  *
@@ -295,8 +321,6 @@ function cacheCallback (results) {
  * These are filtered out from the JSON reply and saved in the clientCity array
  **/
 function geocodeLatLngCallback (jsonReply) {
-	log(logging.trace_level, "Google geocode replied: " + jsonReply.results);
-
 	var city, state, country;
 
 	// Filter out city, state, and country
@@ -319,17 +343,23 @@ function geocodeLatLngCallback (jsonReply) {
 		}
 	}
 
+	clientCurrentType = 0;
 	clientCity = new Array();
 
 	clientCity.push(city);
 	clientCity.push(state);
 	clientCity.push(country);
 
-	// Check DB if a row exists in LocationCache for the client's city, with the client's requested attraction type
-	let queryStr = locationCacheQuery + "city = \"" + city + "\" and state = \"" + state + "\" and country = \"" + country + "\" and Type = \"" + clientRequest.type + "\"";
+	if (Array.isArray(clientRequest.types)) {
+		for (i = 0; i < clientRequest.types.length; i++) {
+			clientCity.push(clientRequest.types[i]);
+		}
+	}
+	else {
+		clientCity.push(clientRequest.types);
+	}	
 
-	// Query DB server for LocationCache entry, then call cacheCallback with the results
-	mySQLClient.queryAndCallback(queryStr, cacheCallback);
+	queryNewType();
 }
 
 /**
@@ -342,6 +372,7 @@ exports.query = (httpResponse, jsonRequest) => {
 	log(logging.trace_level, "received QUERY request");
 	response = httpResponse;
 	clientRequest = jsonRequest;
+	jsonReply = {};
 
 	let location = [jsonRequest.latitude, jsonRequest.longitude];
 
