@@ -167,7 +167,7 @@ function placesNearbyCallback (jsonReply) {
 		console.log(cellsIdx.i + " " + cellsIdx.j + " " + cityRows);
 
 		if (cellsIdx.i == 5) {
-			if (cellsIdx.j < cityRows) {
+			if ((cellsIdx.j + 1) < cityRows) {
 				cellsIdx.i = 0;
 				cellsIdx.j++;
 
