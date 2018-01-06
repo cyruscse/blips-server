@@ -7,9 +7,6 @@ create table LocationCache
 		state char(50),
 		country char(50) NOT NULL,
 		Type char(30) NOT NULL,
-		CenterLat float NOT NULL,
-		CenterLng float NOT NULL,
-		Radius float NOT NULL,
 		CachedTime TIMESTAMP NOT NULL,
 		ID int AUTO_INCREMENT PRIMARY KEY);
 

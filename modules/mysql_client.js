@@ -59,7 +59,10 @@ function buildSchema() {
 		queryStr = mySQLConnection.escape(sqlSchema[index]);
 
 		mySQLConnection.query(sqlSchema[index], function (error, results, fields) {
-			if (error) throw error;
+			if (error) {
+				console.log(sqlSchema[index]);
+				throw error;
+			}
 		});
 	}
 
@@ -126,7 +129,10 @@ exports.queryAndCallback = (queryStr, queryCallback) => {
 	log(logging.trace_level, "queryAndCallback " + queryStr);
 
 	mySQLConnection.query(queryStr, function (error, results, fields) {
-		if (error) throw error;
+		if (error) {
+			console.log(queryStr);
+			throw error;
+		}
 
 		queryCallback(results);
 	});
@@ -141,7 +147,10 @@ exports.bulkInsert = (queryStr, values, callback) => {
 	log(logging.trace_level, "bulkInsert " + queryStr);
 
 	mySQLConnection.query(queryStr, [values], function (error) {
-		if (error) throw error;
+		if (error) {
+			console.log(queryStr + " " + values);
+			throw error;
+		} 
 
 		if (callback != null) {
 			callback();
@@ -168,7 +177,10 @@ exports.tableRowCount = (tableName, countColumn, columnValue, callback) => {
 	log(logging.trace_level, "QueryStr: " + queryStr);
 
 	mySQLConnection.query(queryStr, function(error, results, fields) {
-		if (error) throw error;
+		if (error) {
+			console.log(queryStr);
+			throw error;
+		}
 
 		let key = (Object.keys(results[0])[0]);
 
@@ -182,7 +194,10 @@ exports.getUnixTimestamp = (timestamp, callback) => {
 	log(logging.trace_level, "getUnixTimestamp " + queryStr);
 
 	mySQLConnection.query(queryStr, function (error, results, fields) {
-		if (error) throw error;
+		if (error) {
+			console.log(queryStr);
+			throw error;
+		}
 
 		let key = (Object.keys(results[0])[0]);
 
