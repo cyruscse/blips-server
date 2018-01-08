@@ -21,7 +21,7 @@ function setModuleTraceLevel (newLevel) {
 }
 
 // Frequently used SQL queries
-const blipBulkInsertQueryStr = "insert into Blips values ?";
+const blipBulkInsertQueryStr = "insert ignore into Blips values ?";
 const blipQuery = "select * from Blips where ";
 const locationCacheQuery = "select * from LocationCache where ";
 const locationCacheInsert = "insert into LocationCache values (";
@@ -35,6 +35,7 @@ const geocodeStateFilter = "administrative_area_level_1";
 const geocodeCountryFilter = "country";
 
 const oneDayInSeconds = 86400;
+const R = 6371;
 
 const clientTypeOffset = 3;
 
@@ -44,11 +45,15 @@ var response;                // httpResponse from main, JSON reply is written he
 var nextPageToken = "";      // Next page token returned from Google, used to paginate response past 20 places
 
 // Private variables relating to client's request
-var clientCityLat;           // Latitude of center of client's city
-var clientCityLng;			 // Longitude of center of client's city
-var clientCityRadius;		 // Radius from city center to city limits
+var cells;
+var cellsIdx;
+
+var cityRows;
+var cellRadius;
+var cellsRemaining = 0;
+
 var clientRequest;			 // Client's JSON request
-var clientCity;				 // Client's city name
+var clientCity;				 // Client's city name, this has too much responsibility, break this up
 var clientCurrentType = 0;
 
 var jsonReply = {};
@@ -58,7 +63,6 @@ var jsonReply = {};
  * Distance is returned in meters
  **/
 function distance (lat1, lng1, lat2, lng2) {
-	let R = 6371;
 	let dLat = deg2rad(lat2 - lat1);
 	let dLng = deg2rad(lng2 - lng1);
 	let a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -69,6 +73,15 @@ function distance (lat1, lng1, lat2, lng2) {
 	let d = R * c;
 
 	return (d * 1000);		//Return in meters
+}
+
+function calculateNewLocation (oldLat, oldLng, dx, dy) {
+	let newLocation = {
+		lat: oldLat + ((dy / 1000) / R) * (180 / Math.PI),
+		lng: oldLng + ((dx / 1000) / R) * (180 / Math.PI) / Math.cos(oldLat * Math.PI / 180)
+	};
+
+	return newLocation;
 }
 
 // Convert degrees to radians
@@ -144,16 +157,38 @@ function placesNearbyCallback (jsonReply) {
 	var callback;
 	var toInsert = new Array();
 
-	if (jsonReply.next_page_token) {
-		nextPageToken = jsonReply.next_page_token;
-		callback = queryPlaces;
-	}
-	else {
+	// Loop through 2D array of city cells
+	if (cellsRemaining == 0) {
 		callback = placeLookupComplete;
 	}
+	else {
+		cellsRemaining--;
+
+		console.log(cellsIdx.i + " " + cellsIdx.j + " " + cityRows);
+
+		if (cellsIdx.i == 5) {
+			if ((cellsIdx.j + 1) < cityRows) {
+				cellsIdx.i = 0;
+				cellsIdx.j++;
+
+				callback = queryPlaces;
+			}
+			else {
+				callback = placeLookupComplete;
+			}
+		}
+		else {
+			cellsIdx.i++;
+
+			callback = queryPlaces;
+		}
+	}
+
+	console.log("post " + cellsIdx.i + " " + cellsIdx.j + " " + jsonReply.results);
 
 	if (jsonReply.results.length == 0) {
-		log(logging.warning_level, "Got no place results for city " + clientCity[0] + ", " + clientCity[1] + ", " + clientCity[2]);
+		log(logging.warning_level, "Got no place results for city " + clientCity[0] + ", " + clientCity[1] + ", " + clientCity[2] + " - jumping to callback");
+		callback();
 		return;
 	}
 
@@ -175,29 +210,26 @@ function placesNearbyCallback (jsonReply) {
 	mySQLClient.bulkInsert(queryStr, toInsert, callback);
 }
 
-function pageTokenPlaceQuery () {
-	let location = [clientCityLat, clientCityLng];
-	var npToken = nextPageToken;
-	nextPageToken = "";
-
-	googleClient.placesNearbyToLocation(location, clientCity[clientCurrentType + clientTypeOffset], clientCityRadius, false, npToken, placesNearbyCallback);
-}
-
 /**
  * Now that we have the center coordinate, radius to city limits, and attraction type, call Google's placesNearby API to get a list of places
  *
  * Call placesNearbyCallback with the results.
  **/
 function queryPlaces () {
-	log(logging.trace_level, "Getting places on location " + clientCityLat + " " + clientCityLng + " of type " + clientCity[clientCurrentType + clientTypeOffset] + " with radius (in meters) " + clientCityRadius);
+	let currentCellLat = cells[cellsIdx.i][cellsIdx.j].lat;
+	let currentCellLng = cells[cellsIdx.i][cellsIdx.j].lng;
+
+	log(logging.trace_level, "Getting places on location " + currentCellLat + " " + currentCellLng + " of type " + clientCity[clientCurrentType + clientTypeOffset] + " with radius (in meters) " + cellRadius);
 
 	if (nextPageToken.length == 0) {
-		let location = [clientCityLat, clientCityLng];
+		let location = [currentCellLat, currentCellLng];
 
-		googleClient.placesNearbyToLocation(location, clientCity[clientCurrentType + clientTypeOffset], clientCityRadius, false, "", placesNearbyCallback);
+		googleClient.placesNearbyToLocation(location, clientCity[clientCurrentType + clientTypeOffset], cellRadius, false, "", placesNearbyCallback);
 	}
 	else {
-		setTimeout(pageTokenPlaceQuery, 2000);
+		console.log("GOT MORE THAN 20 RESULTS FIX FIX FI");
+		response.end();
+		return;
 	}
 }
 
@@ -230,16 +262,42 @@ function geocodeLocationCallback (jsonReply) {
 	let neBound = jsonReply.results[0].geometry.viewport.northeast;
 	let swBound = jsonReply.results[0].geometry.viewport.southwest;
 
-	clientCityLng = (neBound.lng + swBound.lng) / 2;
-	clientCityLat = (neBound.lat + swBound.lat) / 2;
+	let nwBound = {
+		lat: neBound.lat,
+		lng: swBound.lng
+	};
+	
+	let seBound = {
+		lat: swBound.lat,
+		lng: neBound.lng
+	};
 
-	clientCityRadius = distance(neBound.lat, neBound.lng, clientCityLat, clientCityLng);
+	let cityLength = distance(neBound.lat, neBound.lng, nwBound.lat, nwBound.lng);
+	let cityWidth = distance(nwBound.lat, nwBound.lng, swBound.lat, swBound.lng);
+
+	cells = new Array();
+	cellRadius = cityLength / 7;	//7 needs to be a const
+	cityRows = Math.ceil(cityWidth / cellRadius);
+	cellsRemaining = 7 * cityRows;
+
+	cellsIdx = {
+		i: 0,
+		j: 0
+	};
+
+	for (i = 0; i < 7; i++) {
+		cells[i] = new Array();
+		for (j = 0; j < cityRows; j++) {
+			var newPt = calculateNewLocation(swBound.lat, swBound.lng, (cellRadius * i), (cellRadius * j));
+			cells[i][j] = newPt;
+		}
+	}
 
 	log(logging.trace_level, "Geocoded client location, city is " + clientCity[0] + ", " + clientCity[1] + ", " + clientCity[2]);
-	log(logging.trace_level, "City center is " + clientCityLat + ", " + clientCityLng + ", with radius " + clientCityRadius);
+	log(logging.trace_level, "City length is " + cityLength + " width is " + cityWidth + " cellRadius is " + cellRadius + " cityRows " + cityRows);
 
 	// Set up SQL insertion for new LocationCache row
-	let queryStr = locationCacheInsert + "\"" + clientCity[0] + "\", \"" + clientCity[1] + "\", \"" + clientCity[2] + "\", \"" + clientCity[clientCurrentType + clientTypeOffset] + "\", " + clientCityLat + ", " + clientCityLng + ", " + clientCityRadius + ", (now()), NULL)";
+	let queryStr = locationCacheInsert + "\"" + clientCity[0] + "\", \"" + clientCity[1] + "\", \"" + clientCity[2] + "\", \"" + clientCity[clientCurrentType + clientTypeOffset] + "\", (now()), NULL)";
 
 	mySQLClient.queryAndCallback(queryStr, cacheCreationCallback);
 }
@@ -294,10 +352,6 @@ function cacheCallback (results) {
 	}
 	else {
 		lcID = results[0].ID;
-		clientCityLat = results[0].CenterLat;
-		clientCityLng = results[0].CenterLng;
-		clientCityRadius = results[0].Radius;
-
 		let cachedTime = results[0].CachedTime;
 
 		mySQLClient.getUnixTimestamp(cachedTime, timeCheckCallback);

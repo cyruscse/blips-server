@@ -46,3 +46,7 @@ AWS Useful Tools
 - eb ssh (SSH to AWS server running blips-server, can manually view logs, change server environment)
 - eb logs (self-explanatory, this should also return logs created by logging.js, need to confirm)
 - eb status
+
+Important Commands
+- curl --request POST --data-binary "@postexamples/ottlodging.json" http://blipsserver-env.us-east-2.elasticbeanstalk.com/ (curl POST a file to server)
+- zip -r build/blips.zip * (package ELB deployment)
