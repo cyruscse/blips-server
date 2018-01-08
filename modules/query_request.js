@@ -189,6 +189,7 @@ function placesNearbyCallback (jsonReply) {
 	if (jsonReply.results.length == 0) {
 		log(logging.warning_level, "Got no place results for city " + clientCity[0] + ", " + clientCity[1] + ", " + clientCity[2] + " - jumping to callback");
 		callback();
+		return;
 	}
 
 	for (i = 0; i < jsonReply.results.length; i++) {
