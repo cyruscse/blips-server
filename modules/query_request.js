@@ -164,8 +164,6 @@ function placesNearbyCallback (jsonReply) {
 	else {
 		cellsRemaining--;
 
-		console.log(cellsIdx.i + " " + cellsIdx.j + " " + cityRows);
-
 		if (cellsIdx.i == 5) {
 			if ((cellsIdx.j + 1) < cityRows) {
 				cellsIdx.i = 0;
@@ -183,8 +181,6 @@ function placesNearbyCallback (jsonReply) {
 			callback = queryPlaces;
 		}
 	}
-
-	console.log("post " + cellsIdx.i + " " + cellsIdx.j + " " + jsonReply.results);
 
 	if (jsonReply.results.length == 0) {
 		log(logging.warning_level, "Got no place results for city " + clientCity[0] + ", " + clientCity[1] + ", " + clientCity[2] + " - jumping to callback");
@@ -227,7 +223,7 @@ function queryPlaces () {
 		googleClient.placesNearbyToLocation(location, clientCity[clientCurrentType + clientTypeOffset], cellRadius, false, "", placesNearbyCallback);
 	}
 	else {
-		console.log("GOT MORE THAN 20 RESULTS FIX FIX FI");
+		console.log("Got more than 20 results for " + clientCity[0] + " " + clientCity[1] + " " + clientCity[2]); // Monitor this for now, we might not need to do anything if this case is never hit
 		response.end();
 		return;
 	}
