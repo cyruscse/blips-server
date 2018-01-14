@@ -1,5 +1,6 @@
 from multiprocessing.dummy import Pool as ThreadPool
 
+import googlemaps
 import pymysql
 import sys
 
@@ -15,6 +16,9 @@ city = ""
 state = ""
 country = ""
 
+#def cacheNewResults(attraction):
+
+
 def cacheQuery(attraction):
 	query = location_cache_query + "city = \"" + city + "\" and state = \"" + state + "\" and country = \"" + country + "\" and Type = \"" + attraction + "\""
 
@@ -25,6 +29,8 @@ def cacheQuery(attraction):
 	conn.begin()
 
 	cursor.execute(query)
+
+	print(query)
 
 	for row in cursor:
 		print(row[0])
