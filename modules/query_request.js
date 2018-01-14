@@ -326,7 +326,7 @@ function timeCheckCallback (results) {
 		
 		let queryStr = blipCacheClear + " " + lcID;
 
-		mySQLClient.queryAndCallback(queryStr, queryPlaces);
+		mySQLClient.queryAndCallback(queryStr, getCacheBounds);
 	}
 	else {
 		placeLookupComplete();
