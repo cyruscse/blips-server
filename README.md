@@ -49,4 +49,4 @@ AWS Useful Tools
 
 Important Commands
 - curl --request POST --data-binary "@postexamples/ottlodging.json" http://blipsserver-env.us-east-2.elasticbeanstalk.com/ (curl POST a file to server)
-- zip -r build/blips.zip * (package ELB deployment)
+- zip -r build/blips.zip . (package ELB deployment)

@@ -7,6 +7,7 @@
 const googleClient = require('./google_client.js');
 const mySQLClient = require('./mysql_client.js');
 const logging = require('./logging.js');
+const pythonshell = require('python-shell');
 
 // Logging Module setup
 const log_file = '/tmp/query_request.log';
@@ -19,6 +20,8 @@ function log (entry_trace_level, entry) {
 function setModuleTraceLevel (newLevel) {
     module_trace_level = newLevel;
 }
+
+const query_script = "modules/mt_query.py"
 
 // Frequently used SQL queries
 const blipBulkInsertQueryStr = "insert ignore into Blips values ?";
@@ -54,6 +57,7 @@ var cellsRemaining = 0;
 
 var clientRequest;			 // Client's JSON request
 var clientCity;				 // Client's city name, this has too much responsibility, break this up
+var queryArgs;
 var clientCurrentType = 0;
 
 var jsonReply = {};
@@ -364,6 +368,22 @@ function queryNewType () {
 	mySQLClient.queryAndCallback(queryStr, cacheCallback);
 }
 
+function mtQuery () {
+	var options = {
+		mode: 'text',
+		pythonPath: '/usr/bin/python35',
+		args: queryArgs
+	};
+
+	pythonshell.run(query_script, options, function (error, results) {
+		if (error) throw error;
+
+		console.log(results);
+		response.end();
+		return;
+	});
+}
+
 /**
  * Reverse geocoding callback function for google_client
  *
@@ -409,7 +429,12 @@ function geocodeLatLngCallback (jsonReply) {
 		clientCity.push(clientRequest.types);
 	}	
 
-	queryNewType();
+	queryArgs = mySQLClient.getDBDetails();
+	queryArgs.push.apply(queryArgs, clientCity);
+
+	mtQuery();
+
+	//queryNewType();
 }
 
 /**

@@ -205,6 +205,17 @@ exports.getUnixTimestamp = (timestamp, callback) => {
 	});
 }
 
+exports.getDBDetails = () => {
+	toReturn = new Array();
+
+	toReturn.push(hostname);
+	toReturn.push(dbuser);
+	toReturn.push(dbpass);
+	toReturn.push(dbuser); 	// DB name is the same as DB username
+
+	return toReturn;
+}
+
 exports.addDBReadyCallback = (callback) => {
 	databaseReadyCallbacks.push(callback);
 }
