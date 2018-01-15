@@ -9,9 +9,11 @@ import time
 gmaps = googlemaps.Client(key = 'AIzaSyB0oGuvJF0foOJxAwSj_pxlsLJdijmsoFw')
 
 location_cache_query = "select CachedTime, ID from LocationCache where "
+location_cache_query_id = "select ID from LocationCache where "
 location_cache_insert = "insert into LocationCache values ("
 location_cache_update = "update LocationCache set CachedTime = (now()) where Type = \""
 blip_cache_clear = "delete from Blips where LCID = \""
+blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Latitude, Longitude ) values (%s, %s, %s, %s, %s, %s)"
 unix_timestamp_query = "select UNIX_TIMESTAMP (\'"
 
 db_address = ""
@@ -23,8 +25,11 @@ db = ""
 city = ""
 state = ""
 country = ""
+lc_id = 0
+global_attraction = ""
 
 cells = []
+cell_radius = 0
 
 one_day_in_seconds = 86400
 R = 6371
@@ -55,10 +60,48 @@ def calculateNewLocation(old_lat, old_lng, dx, dy):
 
 	return new_location
 
-def queryPlaces(attraction):
-	print(attraction)
+def queryPlaces(loc):
+	places = gmaps.places_nearby(loc, radius = cell_radius, open_now = True, type = global_attraction) # need to hook up open_now
+
+	to_insert = []
+
+	if len(places["results"]) is 0:
+		print("No places for " + str(loc["lat"]) + " " + str(loc["lng"]) + " " + str(global_attraction))
+		return
+
+	for result in places["results"]:
+		row = []
+
+		row.append(result["id"])
+		row.append(lc_id)
+		row.append(global_attraction)
+		row.append(result["name"].encode('utf-8'))
+		row.append(result["geometry"]["location"]["lat"])
+		row.append(result["geometry"]["location"]["lng"])
+
+		to_insert.append(row)
+
+	conn, cursor = setupCursor()
+
+	cursor.executemany(blip_bulk_insert, to_insert)
+	conn.commit()
+
+	cursor.close()
+	conn.close()
+
+def initQueryPlaces(attraction):
+	global global_attraction
+
+	global_attraction = attraction
+
+	pool = ThreadPool(len(cells))
+	results = pool.map(queryPlaces, cells)
+	pool.close()
+	pool.join()
 
 def createLocationCache(attraction):
+	global lc_id
+
 	query = location_cache_insert + "\"" + city + "\", \"" + state + "\", \"" + country + "\", \"" + attraction + "\", (now()), NULL)"
 
 	conn, cursor = setupCursor()
@@ -66,13 +109,18 @@ def createLocationCache(attraction):
 	cursor.execute(query)
 	conn.commit()
 
+	query = location_cache_query_id + "city = \"" + city + "\" and state = \"" + state + "\" and country = \"" + country + "\" and Type = \"" + attraction + "\""
+
+	cursor.execute(query)
+	lc_id = cursor.fetchone()[0]
+
 	cursor.close()
 	conn.close()
 
-	queryPlaces(attraction)
+	initQueryPlaces(attraction)
 
-def updateLocationCache(attraction, lcID):
-	query = blip_cache_clear + str(lcID) + "\""
+def updateLocationCache(attraction):
+	query = blip_cache_clear + str(lc_id) + "\""
 
 	conn, cursor = setupCursor()
 
@@ -86,7 +134,7 @@ def updateLocationCache(attraction, lcID):
 	cursor.close()
 	conn.close()
 
-	queryPlaces(attraction)
+	initQueryPlaces(attraction)
 
 def checkCacheValidity(cached_time):
 	current_time = time.time()
@@ -98,7 +146,7 @@ def checkCacheValidity(cached_time):
 	cursor.close()
 	conn.close()
 
-	if (cursor.fetchone()[0] + one_day_in_seconds) < current_time:
+	if (cursor.fetchone()[0] + one_day_in_seconds) > current_time:
 		return False
 
 	return True
@@ -115,12 +163,16 @@ def cacheQuery(attraction):
 	if cursor.rowcount is 0:
 		createLocationCache(attraction)
 	else:
+		global lc_id
 		lc_entry = cursor.fetchone()
+		lc_id = lc_entry[1]
+
 		if checkCacheValidity(lc_entry[0]) is False:
-			updateLocationCache(attraction, lc_entry[1])
+			updateLocationCache(attraction)
 
 def geocodeLocation():
 	global cells
+	global cell_radius
 
 	location_str = city + ", " + state + ", " + country
 	geocode_result = gmaps.geocode(location_str)
@@ -140,10 +192,9 @@ def geocodeLocation():
 	cells = []
 
 	for i in range(7):
-		cells.append([])
 		for j in range(city_rows):
 			new_point = calculateNewLocation(sw_bound['lat'], sw_bound['lng'], (cell_radius * i), (cell_radius * j))
-			cells[i].append(new_point)
+			cells.append(new_point)
 
 def main():
 	global db_address
