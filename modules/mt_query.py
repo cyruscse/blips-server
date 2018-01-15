@@ -66,7 +66,7 @@ def queryPlaces(loc):
 	to_insert = []
 
 	if len(places["results"]) is 0:
-		print("No places for " + str(loc["lat"]) + " " + str(loc["lng"]) + " " + str(global_attraction))
+		#print("No places for " + str(loc["lat"]) + " " + str(loc["lng"]) + " " + str(global_attraction)) commented out until we can write this to disk
 		return
 
 	for result in places["results"]:
@@ -94,10 +94,10 @@ def initQueryPlaces(attraction):
 
 	global_attraction = attraction
 
-	#pool = ThreadPool(len(cells))
-	#results = pool.map(queryPlaces, cells)
-	#pool.close()
-	#pool.join() figure out if infinite looooop
+	pool = ThreadPool(len(cells))
+	results = pool.map(queryPlaces, cells)
+	pool.close()
+	pool.join()
 
 def createLocationCache(attraction):
 	global lc_id
@@ -165,7 +165,7 @@ def cacheQuery(attraction):
 	if cursor.rowcount is 0:
 		createLocationCache(attraction)
 	else:
-		global lc_id
+		global lc_id   # this may be causing all threads to use the same lc id, investigate
 		lc_entry = cursor.fetchone()
 		lc_id = lc_entry[1]
 
