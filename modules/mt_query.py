@@ -146,7 +146,9 @@ def checkCacheValidity(cached_time):
 	cursor.close()
 	conn.close()
 
-	if (cursor.fetchone()[0] + one_day_in_seconds) > current_time:
+	curTime = cursor.fetchone()[0]
+
+	if (curTime + one_day_in_seconds) < current_time:
 		return False
 
 	return True
