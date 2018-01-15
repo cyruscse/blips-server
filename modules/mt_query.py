@@ -94,10 +94,10 @@ def initQueryPlaces(attraction):
 
 	global_attraction = attraction
 
-	pool = ThreadPool(len(cells))
-	results = pool.map(queryPlaces, cells)
-	pool.close()
-	pool.join()
+	#pool = ThreadPool(len(cells))
+	#results = pool.map(queryPlaces, cells)
+	#pool.close()
+	#pool.join() figure out if infinite looooop
 
 def createLocationCache(attraction):
 	global lc_id
@@ -172,6 +172,8 @@ def cacheQuery(attraction):
 		if checkCacheValidity(lc_entry[0]) is False:
 			updateLocationCache(attraction)
 
+	return lc_id
+
 def geocodeLocation():
 	global cells
 	global cell_radius
@@ -224,5 +226,7 @@ def main():
 	results = pool.map(cacheQuery, attraction_types)
 	pool.close()
 	pool.join()
+
+	print(results)
 
 main()
