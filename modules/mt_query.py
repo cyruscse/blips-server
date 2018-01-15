@@ -4,11 +4,15 @@ import googlemaps
 import pymysql
 import sys
 import math
+import time
 
 gmaps = googlemaps.Client(key = 'AIzaSyB0oGuvJF0foOJxAwSj_pxlsLJdijmsoFw')
 
-location_cache_query = "select * from LocationCache where "
+location_cache_query = "select CachedTime, ID from LocationCache where "
 location_cache_insert = "insert into LocationCache values ("
+location_cache_update = "update LocationCache set CachedTime = (now()) where Type = \""
+blip_cache_clear = "delete from Blips where LCID = \""
+unix_timestamp_query = "select UNIX_TIMESTAMP (\'"
 
 db_address = ""
 db_port = 3306
@@ -22,6 +26,7 @@ country = ""
 
 cells = []
 
+one_day_in_seconds = 86400
 R = 6371
 
 def setupCursor():
@@ -50,7 +55,10 @@ def calculateNewLocation(old_lat, old_lng, dx, dy):
 
 	return new_location
 
-def cacheNewResults(attraction):
+def queryPlaces(attraction):
+	print(attraction)
+
+def createLocationCache(attraction):
 	query = location_cache_insert + "\"" + city + "\", \"" + state + "\", \"" + country + "\", \"" + attraction + "\", (now()), NULL)"
 
 	conn, cursor = setupCursor()
@@ -61,6 +69,39 @@ def cacheNewResults(attraction):
 	cursor.close()
 	conn.close()
 
+	queryPlaces(attraction)
+
+def updateLocationCache(attraction, lcID):
+	query = blip_cache_clear + str(lcID) + "\""
+
+	conn, cursor = setupCursor()
+
+	cursor.execute(query)
+
+	query = location_cache_update + attraction + "\""
+
+	cursor.execute(query)
+	conn.commit()
+
+	cursor.close()
+	conn.close()
+
+	queryPlaces(attraction)
+
+def checkCacheValidity(cached_time):
+	current_time = time.time()
+	query = unix_timestamp_query + str(cached_time) + "\')"
+
+	conn, cursor = setupCursor()
+
+	cursor.execute(query)
+	cursor.close()
+	conn.close()
+
+	if (cursor.fetchone()[0] + one_day_in_seconds) < current_time:
+		return False
+
+	return True
 
 def cacheQuery(attraction):
 	query = location_cache_query + "city = \"" + city + "\" and state = \"" + state + "\" and country = \"" + country + "\" and Type = \"" + attraction + "\""
@@ -68,14 +109,15 @@ def cacheQuery(attraction):
 	conn, cursor = setupCursor()
 
 	cursor.execute(query)
-		
 	cursor.close()
 	conn.close()
 
 	if cursor.rowcount is 0:
-		cacheNewResults(attraction)
+		createLocationCache(attraction)
 	else:
-		print("len was not 0")
+		lc_entry = cursor.fetchone()
+		if checkCacheValidity(lc_entry[0]) is False:
+			updateLocationCache(attraction, lc_entry[1])
 
 def geocodeLocation():
 	global cells
