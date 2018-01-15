@@ -67,6 +67,10 @@ def queryPlaces(attraction, lc_id, cell):
 		#print("No places for " + str(loc["lat"]) + " " + str(loc["lng"]) + " " + str(global_attraction)) commented out until we can write this to disk
 		return
 
+	file = '/tmp/mt_' + str(attraction) + '.log'
+
+	f = open(file, 'a')
+
 	for result in places["results"]:
 		row = []
 
@@ -77,19 +81,30 @@ def queryPlaces(attraction, lc_id, cell):
 		row.append(result["geometry"]["location"]["lat"])
 		row.append(result["geometry"]["location"]["lng"])
 
+		f.write(str(row[0]) + " " + str(row[1]) + " " + str(row[2]) + " " + str(row[3]) + " " + str(row[4]) + " " + str(row[5]) + "\n")
+
 		to_insert.append(row)
+
+	f.close()
 
 	conn, cursor = setupCursor()
 
-	cursor.executemany(blip_bulk_insert, to_insert)
+	try:
+		cursor.executemany(blip_bulk_insert, to_insert)
+	except pymysql.err.InternalError:
+		f = open(file, 'a')
+		print("Exception for " + str(cell["lat"]) + " " + str(cell["lng"]) + " " + str(attraction) + " " + str(lc_id) + " " + str(len(to_insert)))
+		f.write("Exception for " + str(cell["lat"]) + " " + str(cell["lng"]) + " " + str(attraction) + " " + str(lc_id) + " " + str(len(to_insert)))
+		f.close()
+
+		return
+	
 	conn.commit()
 
 	cursor.close()
 	conn.close()
 
 def initQueryPlaces(attraction, lc_id):
-	print(lc_id)
-
 	f = lambda attr: lambda lcid: lambda loc: queryPlaces(attraction, lc_id, loc)
 	f = f(attraction)
 	f = f(lc_id)
@@ -111,6 +126,8 @@ def createLocationCache(attraction):
 
 	cursor.execute(query)
 	lc_id = cursor.fetchone()[0]
+
+	print(lc_id)
 
 	cursor.close()
 	conn.close()
@@ -165,6 +182,8 @@ def cacheQuery(attraction):
 	else:
 		lc_entry = cursor.fetchone()
 		lc_id = lc_entry[1]
+
+		print(lc_id)
 
 		if checkCacheValidity(lc_entry[0]) is False:
 			updateLocationCache(attraction, lc_id)
@@ -223,7 +242,5 @@ def main():
 	results = pool.map(cacheQuery, attraction_types)
 	pool.close()
 	pool.join()
-
-	print(results)
 
 main()
