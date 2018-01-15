@@ -25,8 +25,6 @@ db = ""
 city = ""
 state = ""
 country = ""
-lc_id = 0
-global_attraction = ""
 
 cells = []
 cell_radius = 0
@@ -60,8 +58,8 @@ def calculateNewLocation(old_lat, old_lng, dx, dy):
 
 	return new_location
 
-def queryPlaces(loc):
-	places = gmaps.places_nearby(loc, radius = cell_radius, open_now = True, type = global_attraction) # need to hook up open_now
+def queryPlaces(attraction, lc_id, cell):
+	places = gmaps.places_nearby(cell, radius = cell_radius, open_now = True, type = attraction) # need to hook up open_now
 
 	to_insert = []
 
@@ -74,7 +72,7 @@ def queryPlaces(loc):
 
 		row.append(result["id"])
 		row.append(lc_id)
-		row.append(global_attraction)
+		row.append(attraction)
 		row.append(result["name"].encode('utf-8'))
 		row.append(result["geometry"]["location"]["lat"])
 		row.append(result["geometry"]["location"]["lng"])
@@ -89,19 +87,19 @@ def queryPlaces(loc):
 	cursor.close()
 	conn.close()
 
-def initQueryPlaces(attraction):
-	global global_attraction
+def initQueryPlaces(attraction, lc_id):
+	print(lc_id)
 
-	global_attraction = attraction
+	f = lambda attr: lambda lcid: lambda loc: queryPlaces(attraction, lc_id, loc)
+	f = f(attraction)
+	f = f(lc_id)
 
 	pool = ThreadPool(len(cells))
-	results = pool.map(queryPlaces, cells)
+	results = pool.map(f, cells)
 	pool.close()
 	pool.join()
 
 def createLocationCache(attraction):
-	global lc_id
-
 	query = location_cache_insert + "\"" + city + "\", \"" + state + "\", \"" + country + "\", \"" + attraction + "\", (now()), NULL)"
 
 	conn, cursor = setupCursor()
@@ -117,9 +115,9 @@ def createLocationCache(attraction):
 	cursor.close()
 	conn.close()
 
-	initQueryPlaces(attraction)
+	initQueryPlaces(attraction, lc_id)
 
-def updateLocationCache(attraction):
+def updateLocationCache(attraction, lc_id):
 	query = blip_cache_clear + str(lc_id) + "\""
 
 	conn, cursor = setupCursor()
@@ -134,7 +132,7 @@ def updateLocationCache(attraction):
 	cursor.close()
 	conn.close()
 
-	initQueryPlaces(attraction)
+	initQueryPlaces(attraction, lc_id)
 
 def checkCacheValidity(cached_time):
 	current_time = time.time()
@@ -165,14 +163,13 @@ def cacheQuery(attraction):
 	if cursor.rowcount is 0:
 		createLocationCache(attraction)
 	else:
-		global lc_id   # this may be causing all threads to use the same lc id, investigate
 		lc_entry = cursor.fetchone()
 		lc_id = lc_entry[1]
 
 		if checkCacheValidity(lc_entry[0]) is False:
-			updateLocationCache(attraction)
+			updateLocationCache(attraction, lc_id)
 
-	return lc_id
+	return
 
 def geocodeLocation():
 	global cells
