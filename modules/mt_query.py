@@ -54,7 +54,7 @@ def distanceBetweenPoints(lat1, lng1, lat2, lng2):
 	return (d * 1000)
 
 def calculateNewLocation(old_lat, old_lng, dx, dy):
-	new_location = {'lat': old_lat + ((dy / 1000) / R) * (180 / math.pi), 'lng': old_lng + ((dx / 1000) / R) * (180 * math.pi) / math.cos(old_lat * math.pi / 180)}
+	new_location = {'lat': old_lat + ((dy / 1000) / R) * (180 / math.pi), 'lng': old_lng + ((dx / 1000) / R) * (180 / math.pi) / math.cos(old_lat * math.pi / 180)}
 
 	return new_location
 
@@ -62,17 +62,19 @@ def queryPlaces(attraction, lc_id, cell):
 	places = gmaps.places_nearby(cell, radius = cell_radius, open_now = True, type = attraction) # need to hook up open_now
 
 	to_insert = []
-
-	if len(places["results"]) is 0:
-		#print("No places for " + str(loc["lat"]) + " " + str(loc["lng"]) + " " + str(global_attraction)) commented out until we can write this to disk
-		return
-
 	file = '/tmp/mt_' + str(attraction) + '.log'
 
-	f = open(file, 'a')
+	if len(places["results"]) is 0:
+		f = open(file, 'a')
+		f.write("No places for " + str(cell["lat"]) + " " + str(cell["lng"]) + " " + str(attraction))
+		f.close()
+
+		return
 
 	for result in places["results"]:
 		row = []
+
+		result["name"].replace('\xc2\xae', '\'')	# Fix apostrophes in names (MySQL server rejects query otherwise)
 
 		row.append(result["id"])
 		row.append(lc_id)
@@ -81,23 +83,19 @@ def queryPlaces(attraction, lc_id, cell):
 		row.append(result["geometry"]["location"]["lat"])
 		row.append(result["geometry"]["location"]["lng"])
 
-		f.write(str(row[0]) + " " + str(row[1]) + " " + str(row[2]) + " " + str(row[3]) + " " + str(row[4]) + " " + str(row[5]) + "\n")
-
 		to_insert.append(row)
-
-	f.close()
 
 	conn, cursor = setupCursor()
 
 	try:
 		cursor.executemany(blip_bulk_insert, to_insert)
-	except pymysql.err.InternalError:
+	except pymysql.err.InternalError as e:
 		f = open(file, 'a')
-		print("Exception for " + str(cell["lat"]) + " " + str(cell["lng"]) + " " + str(attraction) + " " + str(lc_id) + " " + str(len(to_insert)))
 		f.write("Exception for " + str(cell["lat"]) + " " + str(cell["lng"]) + " " + str(attraction) + " " + str(lc_id) + " " + str(len(to_insert)))
 		f.close()
 
 		return
+		raise e
 	
 	conn.commit()
 

@@ -45,6 +45,29 @@ var queryArgs;
 
 var jsonReply = {};
 
+// Convert degrees to radians
+function deg2rad (deg) {
+	return deg * (Math.PI / 180);
+}
+
+/**
+ * Calculate distance between two lat/lng points
+ * Distance is returned in meters
+ **/
+function distance (lat1, lng1, lat2, lng2) {
+	let R = 6371;
+	let dLat = deg2rad(lat2 - lat1);
+	let dLng = deg2rad(lng2 - lng1);
+	let a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+			Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+			Math.sin(dLng/2) * Math.sin(dLng/2);
+		
+	let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+	let d = R * c;
+		
+	return (d * 1000);		//Return in meters
+}
+
 function writeResponse () {
 	jsonReply = JSON.stringify(jsonReply);
 
@@ -88,8 +111,12 @@ function blipLookupCallback (results) {
  *
  * Query the Blips DB for a list of responses corresponding to the current LocationCache ID.
  **/
-function placeLookupComplete () {
-	let queryStr = blipQuery + "LCID = " + lcID;
+function placeLookupComplete (results) {
+	let queryStr = blipQuery + "LCID = " + results[0];
+
+	for (i = 1; i < results.length; i++) {
+		queryStr = queryStr + " OR LCID = " + results[i];
+	}
 
 	mySQLClient.queryAndCallback(queryStr, blipLookupCallback);
 }
@@ -104,10 +131,7 @@ function mtQuery () {
 	pythonshell.run(query_script, options, function (error, results) {
 		if (error) throw error;
 
-		console.log(results)
-
-		response.end();
-		return;
+		placeLookupComplete(results)
 	});
 }
 
