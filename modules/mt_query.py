@@ -130,14 +130,7 @@ def initQueryPlaces(attraction, lc_id):
 			for blip in cell:
 				combined_to_insert.append(blip)
 
-	conn, cursor = setupCursor()
-
-	# Bulk insert combined_to_insert
-	cursor.executemany(blip_bulk_insert, combined_to_insert)
-	conn.commit()
-
-	cursor.close()
-	conn.close()
+	return combined_to_insert
 
 # Given a previously unqueried attraction type and city, insert a row to the LocationCache table with the current time to start the caching process
 # Once the row is inserted, query the DB for the generated unique ID for the new LocationCache row, then call initQueryPlaces with this ID and attraction type to query Google
@@ -159,7 +152,7 @@ def createLocationCache(attraction):
 	cursor.close()
 	conn.close()
 
-	initQueryPlaces(attraction, lc_id)
+	return initQueryPlaces(attraction, lc_id)
 
 # A row exists for the queried attraction and city, but it is out of date (i.e. cache invalid)
 # First call the DB to delete all rows from the Blips database that correspond to the queried attraction type and city
@@ -179,7 +172,7 @@ def updateLocationCache(attraction, lc_id):
 	cursor.close()
 	conn.close()
 
-	initQueryPlaces(attraction, lc_id)
+	return initQueryPlaces(attraction, lc_id)
 
 # Given a cached time (as standard date/time), call the DB server to convert the date/time to a Unix timestamp. Check if the cached time is within
 # the allowed cache validity time (currently set as one_day_in_seconds, 24 hours)
@@ -213,7 +206,7 @@ def cacheQuery(attraction):
 	conn.close()
 
 	if cursor.rowcount is 0:
-		createLocationCache(attraction)
+		return createLocationCache(attraction)
 	else:
 		lc_entry = cursor.fetchone()
 		lc_id = lc_entry[1]
@@ -223,7 +216,7 @@ def cacheQuery(attraction):
 		# If checkCacheValidity returns False, we need to clear the cache for this LocationCache row
 		# lc_entry[0] is the date/time of caching
 		if checkCacheValidity(lc_entry[0]) is False:
-			updateLocationCache(attraction, lc_id)
+			return updateLocationCache(attraction, lc_id)
 		#If it doesn't return False, this thread ends and joins back to the main thread
 
 	return
@@ -284,6 +277,9 @@ def main():
 
 	geocodeLocation()
 
+	# List that will be populated with results of queries for each cell
+	combined_to_insert = []
+
 	# Create a thread for each passed attraction type
 	pool = ThreadPool(len(attraction_types))
 
@@ -298,6 +294,23 @@ def main():
 	# Close the thread pool and rejoin up to the main thread
 	pool.close()
 	pool.join()
+
+	# This code is executed once all cell thread's for an attraction type are complete.
+	# results contains a 2D array, with the first dimension corresponding to each cell, and the second dimension
+	# containg the blips returned for that cell. We need to join all the blip array together so we can bulk insert into the DB
+	for to_insert in results:
+		if to_insert is not None:
+			for blip in to_insert:
+				combined_to_insert.append(blip)
+
+	conn, cursor = setupCursor()
+
+	# Bulk insert combined_to_insert
+	cursor.executemany(blip_bulk_insert, combined_to_insert)
+	conn.commit()
+
+	cursor.close()
+	conn.close()
 
 	# At this point the script has updated the DB for the current query, and it is ready to be used to formulate a response to the client
 
