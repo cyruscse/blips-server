@@ -74,7 +74,7 @@ def queryPlaces(attraction, lc_id, cell):
 	for result in places["results"]:
 		row = []
 
-		result["name"].replace('\xc2\xae', '\'')	# Fix apostrophes in names (MySQL server rejects query otherwise)
+		result["name"].replace('\xc2\xae', '\'')	# Fix copyright symbol in names (MySQL server rejects query otherwise)
 
 		row.append(result["id"])
 		row.append(lc_id)
@@ -84,33 +84,32 @@ def queryPlaces(attraction, lc_id, cell):
 		row.append(result["geometry"]["location"]["lng"])
 
 		to_insert.append(row)
-
-	conn, cursor = setupCursor()
-
-	try:
-		cursor.executemany(blip_bulk_insert, to_insert)
-	except pymysql.err.InternalError as e:
-		f = open(file, 'a')
-		f.write("Exception for " + str(cell["lat"]) + " " + str(cell["lng"]) + " " + str(attraction) + " " + str(lc_id) + " " + str(len(to_insert)))
-		f.close()
-
-		return
-		raise e
-	
-	conn.commit()
-
-	cursor.close()
-	conn.close()
+		
+	return to_insert
 
 def initQueryPlaces(attraction, lc_id):
 	f = lambda attr: lambda lcid: lambda loc: queryPlaces(attraction, lc_id, loc)
 	f = f(attraction)
 	f = f(lc_id)
+	combined_to_insert = []
 
 	pool = ThreadPool(len(cells))
 	results = pool.map(f, cells)
 	pool.close()
 	pool.join()
+
+	for cell in results:
+		if cell is not None:
+			for blip in cell:
+				combined_to_insert.append(blip)
+
+	conn, cursor = setupCursor()
+
+	cursor.executemany(blip_bulk_insert, combined_to_insert)
+	conn.commit()
+
+	cursor.close()
+	conn.close()
 
 def createLocationCache(attraction):
 	query = location_cache_insert + "\"" + city + "\", \"" + state + "\", \"" + country + "\", \"" + attraction + "\", (now()), NULL)"

@@ -131,7 +131,7 @@ function mtQuery () {
 	pythonshell.run(query_script, options, function (error, results) {
 		if (error) throw error;
 
-		placeLookupComplete(results)
+		placeLookupComplete(results);
 	});
 }
 
