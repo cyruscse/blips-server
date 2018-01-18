@@ -10,7 +10,8 @@
     "express": "latest",
     "google-place-types": "^1.0.1",
     "mysql": "latest",
-    "promise": "latest"
+    "promise": "latest",
+    "python-shell": "latest"
   },
   "scripts": {
     "start": "node main.js"
