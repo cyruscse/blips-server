@@ -20,6 +20,7 @@ location_cache_insert = "insert into LocationCache values ("
 location_cache_update = "update LocationCache set CachedTime = (now()) where Type = \""
 blip_cache_clear = "delete from Blips where LCID = \""
 blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Latitude, Longitude ) values (%s, %s, %s, %s, %s, %s)"
+blip_existence = "select count(*) from Blips where LCID = \""
 unix_timestamp_query = "select UNIX_TIMESTAMP (\'"
 
 # Global DB variables
@@ -202,14 +203,29 @@ def cacheQuery(attraction):
 	conn, cursor = setupCursor()
 
 	cursor.execute(query)
-	cursor.close()
-	conn.close()
 
 	if cursor.rowcount is 0:
+		cursor.close()
+		conn.close()
+
 		return createLocationCache(attraction)
 	else:
 		lc_entry = cursor.fetchone()
 		lc_id = lc_entry[1]
+
+		# We have an LC entry, check if any Blip entries exist
+		# This is here to prevent issue #19
+		query = blip_existence + str(lc_id) + "\""
+
+		cursor.execute(query)
+
+		cursor.close()
+		conn.close()
+
+		blip_count = cursor.fetchone()[0]
+
+		if blip_count is 0:
+			return updateLocationCache(attraction, lc_id)
 
 		print(lc_id)
 
