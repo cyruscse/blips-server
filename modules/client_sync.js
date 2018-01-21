@@ -7,8 +7,9 @@ const mySQLClient = require('./mysql_client.js');
 const logging = require('./logging.js');
 
 const attractionTypeQueryStr = "select * from AttractionTypes";
-const userIDQueryStr = "select * from Users where ID = \"";
-const userInsertQueryStr = "insert into Users values (";
+const userIDQueryStr = "select * from Users where Email = \"";
+const userInsertQueryStr = "insert into Users values (NULL, ";
+const userPrefQueryStr = "select AttractionTypes.Name, UserPreferences.Frequency from UserPreferences inner join AttractionTypes on UserPreferences.AID = AttractionTypes.ID where UserPreferences.UID = \""
 
 // Logging Module setup
 const log_file = '/tmp/client_sync.log';
@@ -22,6 +23,7 @@ function setModuleTraceLevel (newLevel) {
     module_trace_level = newLevel;
 }
 
+var clientID;
 var clientRequest;
 var response;
 var attractionTypes;
@@ -31,20 +33,27 @@ var attractionTypes;
  *
  * There is also a section for attributes, this isn't currently used - but it will be used soon
  */
-function reply() {
+function reply(results) {
 	var jsonReply = {};
 
-	var attributeData = {
-		city_count: 1
-	};
+	if (clientRequest.syncType == "getattractions") {
+		var attributeData = {
+			city_count: 1
+		};
 
-	jsonReply["attributes"] = [];
-	jsonReply["attributes"].push(attributeData);
+		jsonReply["attributes"] = [];
+		jsonReply["attributes"].push(attributeData);
 
-	jsonReply["attraction_types"] = [];
+		jsonReply["attraction_types"] = [];
 
-	for (type in attractionTypes) {
-		jsonReply["attraction_types"].push(attractionTypes[type]);
+		for (type in attractionTypes) {
+			jsonReply["attraction_types"].push(attractionTypes[type]);
+		}		
+	}
+	else if (clientRequest.syncType == "login") {
+		for (i = 0; i < results.length; i++) {
+			jsonReply[results[i].Name] = results[i].Frequency;
+		}
 	}
 
 	jsonReply = JSON.stringify(jsonReply);
@@ -55,17 +64,21 @@ function reply() {
 	response.end();
 }
 
+
+// need to query UserPreferences, modify reply() ^^^ to handle user logins and return a JSONified form of UserPrefs
 function getUserPreferences() {
-	response.end();
-	return;
+	let query = userPrefQueryStr + clientID + "\"";
+
+	mySQLClient.queryAndCallback(query, reply);
 }
 
-function userCreationCallback() {
+function userCreationCallback(results) {
+	clientID = results[0].insertId;
 	getUserPreferences();
 }
 
 function createNewUser() {
-	let query = userInsertQueryStr + "\"" + clientRequest.uid + "\", \"" + clientRequest.name + "\", \"" + clientRequest.email + "\")";
+	let query = userInsertQueryStr + "\"" + clientRequest.name + "\", \"" + clientRequest.email + "\")";
 
 	mySQLClient.queryAndCallback(query, userCreationCallback);
 }
@@ -74,16 +87,15 @@ function createNewUser() {
 function attractionTypeCallback(results) {
 	attractionTypes = results;
 
-	reply();
+	reply([]);
 }
 
 function userQueryCallback(results) {
-	console.log(results);
-
 	if (results.length == 0) {
 		createNewUser();
 	}
 	else {
+		clientID = results[0].ID;
 		getUserPreferences();
 	}
 }
@@ -94,7 +106,7 @@ function queryAttractionTypes() {
 }
 
 function queryUserExistence() {
-	let query = userIDQueryStr + clientRequest.uid + "\"";
+	let query = userIDQueryStr + clientRequest.email + "\"";
 
 	mySQLClient.queryAndCallback(query, userQueryCallback);
 }

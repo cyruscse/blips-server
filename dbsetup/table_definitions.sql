@@ -30,7 +30,7 @@ create table AttractionTypes
 		Name char(30));
 
 create table Users
-	(ID varchar(255) PRIMARY KEY,
+	(ID int AUTO_INCREMENT PRIMARY KEY,
 		Name char(50),
 		Email char(50));
 
