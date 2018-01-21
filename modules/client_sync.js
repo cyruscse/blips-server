@@ -7,7 +7,8 @@ const mySQLClient = require('./mysql_client.js');
 const logging = require('./logging.js');
 
 const attractionTypeQueryStr = "select * from AttractionTypes";
-const userIDQueryStr = "select * from Users where ID = "
+const userIDQueryStr = "select * from Users where ID = \"";
+const userInsertQueryStr = "insert into Users values (";
 
 // Logging Module setup
 const log_file = '/tmp/client_sync.log';
@@ -54,6 +55,21 @@ function reply() {
 	response.end();
 }
 
+function getUserPreferences() {
+	response.end();
+	return;
+}
+
+function userCreationCallback() {
+	getUserPreferences();
+}
+
+function createNewUser() {
+	let query = userInsertQueryStr + "\"" + clientRequest.uid + "\", \"" + clientRequest.name + "\", \"" + clientRequest.email + "\")";
+
+	mySQLClient.queryAndCallback(query, userCreationCallback);
+}
+
 // Callback for mysql_client. Call reply() with DB results.
 function attractionTypeCallback(results) {
 	attractionTypes = results;
@@ -63,6 +79,13 @@ function attractionTypeCallback(results) {
 
 function userQueryCallback(results) {
 	console.log(results);
+
+	if (results.length == 0) {
+		createNewUser();
+	}
+	else {
+		getUserPreferences();
+	}
 }
 
 // Query DB for AttractionTypes table
@@ -71,7 +94,7 @@ function queryAttractionTypes() {
 }
 
 function queryUserExistence() {
-	let query = userIDQueryStr + clientRequest.uid;
+	let query = userIDQueryStr + clientRequest.uid + "\"";
 
 	mySQLClient.queryAndCallback(query, userQueryCallback);
 }
@@ -90,7 +113,7 @@ exports.sync = (httpResponse, jsonRequest) => {
 	if (jsonRequest.syncType == "getattractions") {
         queryAttractionTypes();
 
-    } else if (jsonRequest.requestType == "login") {
+    } else if (jsonRequest.syncType == "login") {
         queryUserExistence();       
     }
 }
