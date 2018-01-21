@@ -7,6 +7,7 @@ const mySQLClient = require('./mysql_client.js');
 const logging = require('./logging.js');
 
 const attractionTypeQueryStr = "select * from AttractionTypes";
+const userIDQueryStr = "select * from Users where ID = "
 
 // Logging Module setup
 const log_file = '/tmp/client_sync.log';
@@ -20,6 +21,7 @@ function setModuleTraceLevel (newLevel) {
     module_trace_level = newLevel;
 }
 
+var clientRequest;
 var response;
 var attractionTypes;
 
@@ -59,9 +61,19 @@ function attractionTypeCallback(results) {
 	reply();
 }
 
+function userQueryCallback(results) {
+	console.log(results);
+}
+
 // Query DB for AttractionTypes table
 function queryAttractionTypes() {
 	mySQLClient.queryAndCallback(attractionTypeQueryStr, attractionTypeCallback);
+}
+
+function queryUserExistence() {
+	let query = userIDQueryStr + clientRequest.uid;
+
+	mySQLClient.queryAndCallback(query, userQueryCallback);
 }
 
 /**
@@ -73,6 +85,12 @@ function queryAttractionTypes() {
 exports.sync = (httpResponse, jsonRequest) => {
 	log(logging.trace_level, "received DBSYNC request");
 	response = httpResponse;
+	clientRequest = jsonRequest;
 
-	queryAttractionTypes();
+	if (jsonRequest.syncType == "getattractions") {
+        queryAttractionTypes();
+
+    } else if (jsonRequest.requestType == "login") {
+        queryUserExistence();       
+    }
 }
