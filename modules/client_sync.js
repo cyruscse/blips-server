@@ -51,6 +51,8 @@ function reply(results) {
 		}		
 	}
 	else if (clientRequest.syncType == "login") {
+		jsonReply["userID"] = clientID;
+
 		for (i = 0; i < results.length; i++) {
 			jsonReply[results[i].Name] = results[i].Frequency;
 		}
