@@ -75,7 +75,7 @@ function getUserPreferences() {
 }
 
 function userCreationCallback(results) {
-	clientID = results[0].insertId;
+	clientID = results.insertId;
 	getUserPreferences();
 }
 

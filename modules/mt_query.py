@@ -22,6 +22,7 @@ blip_cache_clear = "delete from Blips where LCID = \""
 blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Latitude, Longitude ) values (%s, %s, %s, %s, %s, %s)"
 blip_existence = "select count(*) from Blips where LCID = \""
 unix_timestamp_query = "select UNIX_TIMESTAMP (\'"
+user_preference_update = "insert into UserPreferences (UID, AID, Frequency) select (\""
 
 # Global DB variables
 db_address = ""
@@ -34,6 +35,8 @@ db = ""
 city = ""
 state = ""
 country = ""
+
+user_id = -1
 
 # Same implementation as the city-matrix branch, create a grid over the current city and query for blips
 # in each cell. This Python implementation is multithreaded, all cells are queried simultaneously.
@@ -198,9 +201,14 @@ def checkCacheValidity(cached_time):
 # If a row doesn't exist for the client's city and this thread's attraction type, create a new row
 # If a row exists, call cacheCacheValidity to determine whether or not the cache can be used
 def cacheQuery(attraction):
-	query = location_cache_query + "city = \"" + city + "\" and state = \"" + state + "\" and country = \"" + country + "\" and Type = \"" + attraction + "\""
+	query = user_preference_update + str(user_id) + "\"), (select ID from AttractionTypes where AttractionTypes.Name = \"" + attraction + "\"), (1) on duplicate key update Frequency = Frequency + 1"
 
 	conn, cursor = setupCursor()
+
+	cursor.execute(query)
+	conn.commit();
+
+	query = location_cache_query + "city = \"" + city + "\" and state = \"" + state + "\" and country = \"" + country + "\" and Type = \"" + attraction + "\""
 
 	cursor.execute(query)
 
@@ -280,8 +288,9 @@ def main():
 	global city
 	global state
 	global country
+	global user_id
 
-	attraction_types = sys.argv[8:]
+	attraction_types = sys.argv[9:]
 
 	db_address = sys.argv[1]
 	db_user = sys.argv[2]
@@ -290,6 +299,7 @@ def main():
 	city = sys.argv[5]
 	state = sys.argv[6]
 	country = sys.argv[7]
+	user_id = sys.argv[8]
 
 	geocodeLocation()
 
