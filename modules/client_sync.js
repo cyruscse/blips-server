@@ -9,7 +9,9 @@ const logging = require('./logging.js');
 const attractionTypeQueryStr = "select * from AttractionTypes";
 const userIDQueryStr = "select * from Users where Email = \"";
 const userInsertQueryStr = "insert into Users values (NULL, ";
+const userDeleteQueryStr = "delete from Users where ID = \"";
 const userPrefQueryStr = "select AttractionTypes.Name, UserPreferences.Frequency from UserPreferences inner join AttractionTypes on UserPreferences.AID = AttractionTypes.ID where UserPreferences.UID = \""
+const userClearHistoryQueryStr = "delete from UserPreferences where UID = \"";
 
 // Logging Module setup
 const log_file = '/tmp/client_sync.log';
@@ -57,6 +59,9 @@ function reply(results) {
 			jsonReply[results[i].Name] = results[i].Frequency;
 		}
 	}
+
+	jsonReply["status"] = [];
+	jsonReply["status"].push("OK");
 
 	jsonReply = JSON.stringify(jsonReply);
 
@@ -113,6 +118,18 @@ function queryUserExistence() {
 	mySQLClient.queryAndCallback(query, userQueryCallback);
 }
 
+function clearUserHistory() {
+	let query = userClearHistoryQueryStr + clientRequest.userID + "\"";
+
+	mySQLClient.queryAndCallback(query, reply);
+}
+
+function deleteUser() {
+	let query = userDeleteQueryStr + clientRequest.userID + "\"";
+
+	mySQLClient.queryAndCallback(query, clearUserHistory);
+}
+
 /**
  * Public facing function for client_sync.
  *
@@ -126,8 +143,14 @@ exports.sync = (httpResponse, jsonRequest) => {
 
 	if (jsonRequest.syncType == "getattractions") {
         queryAttractionTypes();
-
-    } else if (jsonRequest.syncType == "login") {
+    }
+    else if (jsonRequest.syncType == "login") {
         queryUserExistence();       
+    }
+    else if (jsonRequest.syncType == "clearHistory") {
+    	clearUserHistory();
+    }
+    else if (jsonRequest.syncType == "deleteUser") {
+    	deleteUser();
     }
 }
