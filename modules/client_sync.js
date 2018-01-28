@@ -7,6 +7,11 @@ const mySQLClient = require('./mysql_client.js');
 const logging = require('./logging.js');
 
 const attractionTypeQueryStr = "select * from AttractionTypes";
+const userIDQueryStr = "select * from Users where Email = \"";
+const userInsertQueryStr = "insert into Users values (NULL, ";
+const userDeleteQueryStr = "delete from Users where ID = \"";
+const userPrefQueryStr = "select AttractionTypes.Name, UserPreferences.Frequency from UserPreferences inner join AttractionTypes on UserPreferences.AID = AttractionTypes.ID where UserPreferences.UID = \""
+const userClearHistoryQueryStr = "delete from UserPreferences where UID = \"";
 
 // Logging Module setup
 const log_file = '/tmp/client_sync.log';
@@ -20,6 +25,8 @@ function setModuleTraceLevel (newLevel) {
     module_trace_level = newLevel;
 }
 
+var clientID;
+var clientRequest;
 var response;
 var attractionTypes;
 
@@ -28,21 +35,33 @@ var attractionTypes;
  *
  * There is also a section for attributes, this isn't currently used - but it will be used soon
  */
-function reply() {
+function reply(results) {
 	var jsonReply = {};
 
-	var attributeData = {
-		city_count: 1
-	};
+	if (clientRequest.syncType == "getattractions") {
+		var attributeData = {
+			city_count: 1
+		};
 
-	jsonReply["attributes"] = [];
-	jsonReply["attributes"].push(attributeData);
+		jsonReply["attributes"] = [];
+		jsonReply["attributes"].push(attributeData);
 
-	jsonReply["attraction_types"] = [];
+		jsonReply["attraction_types"] = [];
 
-	for (type in attractionTypes) {
-		jsonReply["attraction_types"].push(attractionTypes[type]);
+		for (type in attractionTypes) {
+			jsonReply["attraction_types"].push(attractionTypes[type]);
+		}		
 	}
+	else if (clientRequest.syncType == "login") {
+		jsonReply["userID"] = clientID;
+
+		for (i = 0; i < results.length; i++) {
+			jsonReply[results[i].Name] = results[i].Frequency;
+		}
+	}
+
+	jsonReply["status"] = [];
+	jsonReply["status"].push("OK");
 
 	jsonReply = JSON.stringify(jsonReply);
 
@@ -52,16 +71,63 @@ function reply() {
 	response.end();
 }
 
+
+// need to query UserPreferences, modify reply() ^^^ to handle user logins and return a JSONified form of UserPrefs
+function getUserPreferences() {
+	let query = userPrefQueryStr + clientID + "\"";
+
+	mySQLClient.queryAndCallback(query, reply);
+}
+
+function userCreationCallback(results) {
+	clientID = results.insertId;
+	getUserPreferences();
+}
+
+function createNewUser() {
+	let query = userInsertQueryStr + "\"" + clientRequest.name + "\", \"" + clientRequest.email + "\")";
+
+	mySQLClient.queryAndCallback(query, userCreationCallback);
+}
+
 // Callback for mysql_client. Call reply() with DB results.
 function attractionTypeCallback(results) {
 	attractionTypes = results;
 
-	reply();
+	reply([]);
+}
+
+function userQueryCallback(results) {
+	if (results.length == 0) {
+		createNewUser();
+	}
+	else {
+		clientID = results[0].ID;
+		getUserPreferences();
+	}
 }
 
 // Query DB for AttractionTypes table
 function queryAttractionTypes() {
 	mySQLClient.queryAndCallback(attractionTypeQueryStr, attractionTypeCallback);
+}
+
+function queryUserExistence() {
+	let query = userIDQueryStr + clientRequest.email + "\"";
+
+	mySQLClient.queryAndCallback(query, userQueryCallback);
+}
+
+function clearUserHistory() {
+	let query = userClearHistoryQueryStr + clientRequest.userID + "\"";
+
+	mySQLClient.queryAndCallback(query, reply);
+}
+
+function deleteUser() {
+	let query = userDeleteQueryStr + clientRequest.userID + "\"";
+
+	mySQLClient.queryAndCallback(query, clearUserHistory);
 }
 
 /**
@@ -73,6 +139,18 @@ function queryAttractionTypes() {
 exports.sync = (httpResponse, jsonRequest) => {
 	log(logging.trace_level, "received DBSYNC request");
 	response = httpResponse;
+	clientRequest = jsonRequest;
 
-	queryAttractionTypes();
+	if (jsonRequest.syncType == "getattractions") {
+        queryAttractionTypes();
+    }
+    else if (jsonRequest.syncType == "login") {
+        queryUserExistence();       
+    }
+    else if (jsonRequest.syncType == "clearHistory") {
+    	clearUserHistory();
+    }
+    else if (jsonRequest.syncType == "deleteUser") {
+    	deleteUser();
+    }
 }

@@ -169,6 +169,7 @@ function geocodeLatLngCallback (jsonReply) {
 	clientCity.push(city);
 	clientCity.push(state);
 	clientCity.push(country);
+	clientCity.push(clientRequest.userID);
 
 	if (Array.isArray(clientRequest.types)) {
 		for (i = 0; i < clientRequest.types.length; i++) {

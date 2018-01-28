@@ -20,10 +20,25 @@ create table Blips
 		PRIMARY KEY (ID, LCID));
 
 /* Add text reviews to Reviews table */
+/* BID -> Blip ID, key into Blips table */
 create table Reviews
 	(BID char(50) PRIMARY KEY,
 		Rating float);
 
 create table AttractionTypes
 	(ID int AUTO_INCREMENT PRIMARY KEY,
-		Name char(30));
+		Name char(30),
+		ProperName char(30));
+
+create table Users
+	(ID int AUTO_INCREMENT PRIMARY KEY,
+		Name char(50),
+		Email char(50));
+
+/* UID -> User ID, key into Users table */
+/* AID -> Attraction ID, key into Attractions table */
+create table UserPreferences
+	(UID varchar(255),
+		AID int,
+		Frequency int,
+		PRIMARY KEY (UID, AID));
