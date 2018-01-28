@@ -27,7 +27,8 @@ create table Reviews
 
 create table AttractionTypes
 	(ID int AUTO_INCREMENT PRIMARY KEY,
-		Name char(30));
+		Name char(30),
+		ProperName char(30));
 
 create table Users
 	(ID int AUTO_INCREMENT PRIMARY KEY,

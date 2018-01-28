@@ -1,3 +1,4 @@
+const fs = require('fs');
 const maps = require('@google/maps');
 const Promise = require('promise');
 const mySQLClient = require('./mysql_client.js');
@@ -16,7 +17,9 @@ var mapsClient = maps.createClient({
 
 // Logging Module setup
 const log_file = '/tmp/google_client.log';
+const translation_file = 'dbsetup/attraction_translate.txt'
 var module_trace_level = logging.warning_level;
+var translation_dict = {};
 
 function log (entry_trace_level, entry) {
     logging.log(entry_trace_level, module_trace_level, log_file, entry);
@@ -26,12 +29,31 @@ function setModuleTraceLevel (newLevel) {
     module_trace_level = newLevel;
 }
 
+function translateAttractionName (attraction) {
+	if (attraction in translation_dict) {
+		return translation_dict[attraction];
+	}
+	else {
+		return attraction;
+	}
+}
+
 // Perform post DB-Setup tasks
 // Currently the one task is to get a list attraction types supported by Google
 // and insert them into the DB if the DB is empty
 function databaseReadyCallback(emptyDB) {
 	if (emptyDB) {
 		log(logging.warning_level, "Rebuilding Google attraction type table");
+
+		var translation_table = fs.readFileSync(translation_file).toString().split('\n');
+
+		for (entry in translation_table) {
+			var translation = translation_table[entry].split(' ');
+			key = translation.shift();
+			val = translation.join(' ').replace(/"/g, '');
+
+			translation_dict[key] = val;
+		}
 
 		var toInsert = new Array();
 		var types = new Array();
@@ -43,6 +65,7 @@ function databaseReadyCallback(emptyDB) {
 
 			row.push("NULL");
 			row.push(types[index]);
+			row.push(translateAttractionName(types[index]));
 
 			toInsert.push(row);
 		}
