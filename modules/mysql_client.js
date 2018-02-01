@@ -40,11 +40,32 @@ function setModuleTraceLevel (newLevel) {
 
 var databaseReadyCallbacks = [];
 
-var mySQLConnection = mysql.createConnection({
+var db_config = {
     host      : hostname,
     user      : dbuser,
-    password  : dbpass,
-});
+    password  : dbpass
+};
+
+var mySQLConnection;
+
+function handleDisconnect() {
+	mySQLConnection = mysql.createConnection(db_config);
+
+	mySQLConnection.connect(function(err) {
+		if (err) {
+			log(logging.critical_level, "Failed to connect to DB!");
+			throw err;
+		}
+	});
+
+	mySQLConnection.on('error', function(err) {
+		if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+			handleDisconnect();
+		} else {
+			throw err;
+		}
+	});
+}
 
 /**
  * If the database schema must be rebuilt, read the file containing the schema
@@ -111,7 +132,7 @@ function notifyReadyListeners(rebuildDB) {
 }
 
 // mysql_client setup, connect to MySQL server and build initial DB tables
-mySQLConnection.connect();
+handleDisconnect();
 schemaSetup();
 
 /*****************************************************
