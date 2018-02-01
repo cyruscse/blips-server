@@ -94,8 +94,11 @@ def queryPlaces(attraction, lc_id, cell):
 
 	for result in places["results"]:
 		row = []
-
-		result["name"].replace('\xc2\xae', '\'')	# Fix copyright symbol in names (MySQL server rejects query otherwise)
+		
+		# Sometimes, Google returns non-ASCII characters in the name.
+		# Python doesn't like non-ASCII characters. Replace non-ASCII characters
+		# with nothing to prevent a crash.
+		''.join([x for x in result["name"] if ord(x) < 128]);
 
 		row.append(result["id"])
 		row.append(lc_id)

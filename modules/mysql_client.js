@@ -48,6 +48,10 @@ var db_config = {
 
 var mySQLConnection;
 
+/**
+ * Handle initial DB connection and any subsequent DB connections.
+ * Called when server initializes, and if the DB drops the connection.
+ */
 function handleDisconnect() {
 	mySQLConnection = mysql.createConnection(db_config);
 
