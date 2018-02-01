@@ -201,12 +201,13 @@ def checkCacheValidity(cached_time):
 # If a row doesn't exist for the client's city and this thread's attraction type, create a new row
 # If a row exists, call cacheCacheValidity to determine whether or not the cache can be used
 def cacheQuery(attraction):
-	query = user_preference_update + str(user_id) + "\"), (select ID from AttractionTypes where AttractionTypes.Name = \"" + attraction + "\"), (1) on duplicate key update Frequency = Frequency + 1"
-
 	conn, cursor = setupCursor()
+	
+	if user_id is not -1:
+		query = user_preference_update + str(user_id) + "\"), (select ID from AttractionTypes where AttractionTypes.Name = \"" + attraction + "\"), (1) on duplicate key update Frequency = Frequency + 1"
 
-	cursor.execute(query)
-	conn.commit();
+		cursor.execute(query)
+		conn.commit();
 
 	query = location_cache_query + "city = \"" + city + "\" and state = \"" + state + "\" and country = \"" + country + "\" and Type = \"" + attraction + "\""
 
