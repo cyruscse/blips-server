@@ -8,6 +8,7 @@ const logging = require('./logging.js');
 const hostname = 'aa5icva8ezh544.crnuwmhdforv.us-east-2.rds.amazonaws.com';
 const dbuser = 'blips';
 const dbpass = 'passpass';
+const dbname = 'blips';
 
 // Scripts required for initial DB build
 const table_definitions = "dbsetup/table_definitions.sql";
@@ -43,7 +44,8 @@ var databaseReadyCallbacks = [];
 var db_config = {
     host      : hostname,
     user      : dbuser,
-    password  : dbpass
+    password  : dbpass,
+    database  : dbname
 };
 
 var mySQLConnection;

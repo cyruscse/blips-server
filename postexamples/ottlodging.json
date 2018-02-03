@@ -1,5 +1,6 @@
 { 
 	"requestType" : "query", 
+        "userID"      : "-1",
 	"latitude"    : "45.4215",
 	"longitude"   : "-75.6972",
   	"types"       : "lodging",
