@@ -205,8 +205,8 @@ def checkCacheValidity(cached_time):
 # If a row exists, call cacheCacheValidity to determine whether or not the cache can be used
 def cacheQuery(attraction):
 	conn, cursor = setupCursor()
-	
-	if user_id is not -1:
+
+	if int(user_id) is not -1:
 		query = user_preference_update + str(user_id) + "\"), (select ID from AttractionTypes where AttractionTypes.Name = \"" + attraction + "\"), (1) on duplicate key update Frequency = Frequency + 1"
 
 		cursor.execute(query)
