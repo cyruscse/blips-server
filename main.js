@@ -66,7 +66,7 @@ var server = http.createServer((request, response) => {
             try {
                 jsonRequest = JSON.parse(body);
 
-                log(logging.trace_level, "Incoming request " + jsonRequest);
+                log(logging.trace_level, "Incoming request" + JSON.stringify(jsonRequest));
 
                 if (typeof jsonRequest != 'object') {
                     log(logging.trace_level, 'Bad JSON posted');
@@ -94,3 +94,4 @@ var server = http.createServer((request, response) => {
 server.listen(port, () => {
     console.log('Server running on port ' + port);
 });
+
