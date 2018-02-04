@@ -88,10 +88,12 @@ function blipLookupCallback (results) {
 	for (i = 0; i < results.length; i++) {
 		let distanceFromClient = distance(results[i].Latitude, results[i].Longitude, clientRequest.latitude, clientRequest.longitude);
 
-		if (distanceFromClient <= clientRequest.radius) {
+		if ((distanceFromClient <= clientRequest.radius) && (results[i].Rating >= clientRequest.minRating) && (results[i].Price <= clientRequest.maxPrice)) {
 			var data = {
 				name: results[i].Name,
 				type: results[i].Type,
+				rating: results[i].Rating,
+				price: results[i].Price,
 				latitude: results[i].Latitude,
 				longitude: results[i].Longitude
 			};

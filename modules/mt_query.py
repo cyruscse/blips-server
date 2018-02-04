@@ -19,7 +19,7 @@ location_cache_query_id = "select ID from LocationCache where "
 location_cache_insert = "insert into LocationCache values ("
 location_cache_update = "update LocationCache set CachedTime = (now()) where Type = \""
 blip_cache_clear = "delete from Blips where LCID = \""
-blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Latitude, Longitude ) values (%s, %s, %s, %s, %s, %s)"
+blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Rating, Price, Latitude, Longitude ) values (%s, %s, %s, %s, %s, %s, %s, %s)"
 blip_existence = "select count(*) from Blips where LCID = \""
 unix_timestamp_query = "select UNIX_TIMESTAMP (\'"
 user_preference_update = "insert into UserPreferences (UID, AID, Frequency) select (\""
@@ -80,14 +80,15 @@ def calculateNewLocation(old_lat, old_lng, dx, dy):
 # Given an attraction type, LocationCache ID, and cell, query Google for a list of attractions (matching the passed attraction type)
 # within the cell. Return the compiled list.
 def queryPlaces(attraction, lc_id, cell):
-	places = gmaps.places_nearby(cell, radius = cell_radius, open_now = True, type = attraction) # need to hook up open_now
+	places = gmaps.places_nearby(cell, radius = cell_radius, max_price = 4, open_now = True, type = attraction) # need to hook up open_now
 
 	to_insert = []
 	file = '/tmp/mt_' + str(attraction) + '.log'
 
 	if len(places["results"]) is 0:
 		f = open(file, 'a')
-		f.write("No places for " + str(cell["lat"]) + " " + str(cell["lng"]) + " " + str(attraction))
+		f.write("No places for " + str(cell["lat"]) + " " + str(cell["lng"]) + " " + str(attraction) + "\n")
+		f.write(str(places))
 		f.close()
 
 		return
@@ -104,6 +105,8 @@ def queryPlaces(attraction, lc_id, cell):
 		row.append(lc_id)
 		row.append(attraction)
 		row.append(result["name"].encode('utf-8'))
+		row.append(result["rating"])
+		row.append(result["price_level"])
 		row.append(result["geometry"]["location"]["lat"])
 		row.append(result["geometry"]["location"]["lng"])
 

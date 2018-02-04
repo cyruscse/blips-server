@@ -15,15 +15,11 @@ create table Blips
 		LCID int NOT NULL,
 		Type char(30) NOT NULL,
 		Name char(100) NOT NULL,
+		Rating float(2, 1) NOT NULL,
+		Price int NOT NULL,
 		Latitude float(10, 7) NOT NULL,
 		Longitude float(10, 7) NOT NULL,
 		PRIMARY KEY (ID, LCID));
-
-/* Add text reviews to Reviews table */
-/* BID -> Blip ID, key into Blips table */
-create table Reviews
-	(BID char(50) PRIMARY KEY,
-		Rating float);
 
 create table AttractionTypes
 	(ID int AUTO_INCREMENT PRIMARY KEY,
