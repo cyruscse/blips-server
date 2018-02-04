@@ -72,9 +72,7 @@ function writeResponse () {
 	jsonReply = JSON.stringify(jsonReply);
 
 	log(logging.trace_level, "Responding with " + jsonReply);
-	response.write(jsonReply);
-
-	response.end();
+	response.write(jsonReply, function (err) { response.end() } );
 }
 
 /**

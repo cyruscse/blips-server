@@ -5,6 +5,9 @@
 
 const mySQLClient = require('./mysql_client.js');
 const logging = require('./logging.js');
+const pythonshell = require('python-shell');
+
+const attr_replace_script = "modules/attraction_replace.py"
 
 const attractionTypeQueryStr = "select * from AttractionTypes";
 const userIDQueryStr = "select * from Users where Email = \"";
@@ -66,9 +69,7 @@ function reply(results) {
 	jsonReply = JSON.stringify(jsonReply);
 
 	log(logging.trace_level, "Responding with " + jsonReply);
-	response.write(jsonReply);
-
-	response.end();
+	response.write(jsonReply, function (err) { response.end() } );
 }
 
 
@@ -124,6 +125,31 @@ function clearUserHistory() {
 	mySQLClient.queryAndCallback(query, reply);
 }
 
+function setUserHistory() {
+	let historyStr = clientRequest.history.replace("[", "{").replace("]", "}");
+	let historyDict = JSON.parse(historyStr);
+
+	var queryArgs = mySQLClient.getDBDetails();
+	queryArgs.push(clientRequest.userID);
+
+	for (entry in historyDict) {
+		queryArgs.push(entry);
+		queryArgs.push(historyDict[entry]);
+	}
+	
+	var options = {
+		mode: 'text',
+		pythonPath: '/usr/bin/python35',
+		args: queryArgs
+	};
+
+	pythonshell.run(attr_replace_script, options, function (error, results) {
+		if (error) throw error;
+		
+		reply([]);
+	});
+}
+
 function deleteUser() {
 	let query = userDeleteQueryStr + clientRequest.userID + "\"";
 
@@ -149,6 +175,9 @@ exports.sync = (httpResponse, jsonRequest) => {
     }
     else if (jsonRequest.syncType == "clearHistory") {
     	clearUserHistory();
+    }
+    else if (jsonRequest.syncType == "setHistory") {
+    	setUserHistory();
     }
     else if (jsonRequest.syncType == "deleteUser") {
     	deleteUser();
