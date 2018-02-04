@@ -1,9 +1,11 @@
 {
 	"requestType" : "query",
-        "userID"      : "-1",
+    "userID"      : "-1",
 	"latitude"    : "40.7101898",
 	"longitude"   : "-74.0079269",
   	"types"       : ["lodging", "bar", "restaurant", "park", "gas_station", "cafe"],
   	"radius"      : "5000",
+  	"minRating"   : "4.0",
+  	"maxPrice"    : "2",
   	"openNow"     : "true"
 }

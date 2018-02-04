@@ -5,5 +5,7 @@
 	"longitude"   : "-74.0079269",
   	"types"       : "lodging",
   	"radius"      : "5000",
+  	"minRating"   : "4.0",
+  	"maxPrice"    : "2",
   	"openNow"     : "true"
 }
