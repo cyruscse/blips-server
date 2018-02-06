@@ -23,7 +23,7 @@ function setModuleTraceLevel (newLevel) {
 
 const query_script = "modules/mt_query.py"
 
-const blipQuery = "select * from Blips where ";
+const blipQuery = "select Blips.Name, Blips.Latitude, Blips.Longitude, AttractionTypes.ProperName, Blips.Rating, Blips.Price from Blips inner join AttractionTypes on Blips.Type = AttractionTypes.Name where ";
 
 // JSON tags returned from Google API calls, used to filter
 // response from Google
@@ -96,7 +96,7 @@ function blipLookupCallback (results) {
 		if ((distanceFromClient <= clientRequest.radius) && (results[i].Rating >= clientRequest.minRating) && (results[i].Price <= clientRequest.maxPrice)) {
 			var data = {
 				name: results[i].Name,
-				type: results[i].Type,
+				type: results[i].ProperName,
 				rating: results[i].Rating,
 				price: results[i].Price,
 				latitude: results[i].Latitude,
@@ -117,10 +117,10 @@ function blipLookupCallback (results) {
  * Query the Blips DB for a list of responses corresponding to the current LocationCache ID.
  **/
 function placeLookupComplete (results) {
-	let queryStr = blipQuery + "LCID = " + results[0];
+	let queryStr = blipQuery + "Blips.LCID = " + results[0];
 
 	for (i = 1; i < results.length; i++) {
-		queryStr = queryStr + " OR LCID = " + results[i];
+		queryStr = queryStr + " OR Blips.LCID = " + results[i];
 	}
 
 	mySQLClient.queryAndCallback(queryStr, blipLookupCallback);
