@@ -88,6 +88,8 @@ function writeResponse (errorType) {
 function blipLookupCallback (results) {
 	var numberResults = Object.keys(jsonReply).length;
 
+	jsonReply["blips"] = [];
+
 	for (i = 0; i < results.length; i++) {
 		let distanceFromClient = distance(results[i].Latitude, results[i].Longitude, clientRequest.latitude, clientRequest.longitude);
 
@@ -101,7 +103,7 @@ function blipLookupCallback (results) {
 				longitude: results[i].Longitude
 			};
 
-			jsonReply[numberResults] = data;
+			jsonReply["blips"].push(data);
 			numberResults++;
 		}
 	}
