@@ -251,10 +251,10 @@ def cacheQuery(attraction):
 
 		blip_count = cursor.fetchone()[0]
 
+		print(lc_id)
+
 		if blip_count is 0:
 			return updateLocationCache(attraction, lc_id)
-
-		print(lc_id)
 
 		# If checkCacheValidity returns False, we need to clear the cache for this LocationCache row
 		# lc_entry[0] is the date/time of caching
