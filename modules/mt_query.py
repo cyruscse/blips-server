@@ -80,7 +80,7 @@ def calculateNewLocation(old_lat, old_lng, dx, dy):
 # Given an attraction type, LocationCache ID, and cell, query Google for a list of attractions (matching the passed attraction type)
 # within the cell. Return the compiled list.
 def queryPlaces(attraction, lc_id, cell):
-	places = gmaps.places_nearby(cell, radius = cell_radius, max_price = 4, open_now = True, type = attraction) # need to hook up open_now
+	places = gmaps.places_nearby(cell, radius = cell_radius, open_now = True, type = attraction) # need to hook up open_now
 
 	to_insert = []
 	file = '/tmp/mt_' + str(attraction) + '.log'
@@ -114,6 +114,7 @@ def queryPlaces(attraction, lc_id, cell):
 		else:
 			row.append("0")
 
+		# Google doesn't have price levels for every attraction.
 		if "price_level" in result:
 			row.append(result["price_level"])
 		else:

@@ -38,33 +38,35 @@ var attractionTypes;
  *
  * There is also a section for attributes, this isn't currently used - but it will be used soon
  */
-function reply(results) {
+function reply(results, errorType) {
 	var jsonReply = {};
 
-	if (clientRequest.syncType == "getattractions") {
-		var attributeData = {
-			city_count: 1
-		};
+	if (errorType == "OK") {
+		if (clientRequest.syncType == "getattractions") {
+			var attributeData = {
+				city_count: 1
+			};
 
-		jsonReply["attributes"] = [];
-		jsonReply["attributes"].push(attributeData);
+			jsonReply["attributes"] = [];
+			jsonReply["attributes"].push(attributeData);
 
-		jsonReply["attraction_types"] = [];
+			jsonReply["attraction_types"] = [];
 
-		for (type in attractionTypes) {
-			jsonReply["attraction_types"].push(attractionTypes[type]);
-		}		
-	}
-	else if (clientRequest.syncType == "login") {
-		jsonReply["userID"] = clientID;
+			for (type in attractionTypes) {
+				jsonReply["attraction_types"].push(attractionTypes[type]);
+			}		
+		}
+		else if (clientRequest.syncType == "login") {
+			jsonReply["userID"] = clientID;
 
-		for (i = 0; i < results.length; i++) {
-			jsonReply[results[i].Name] = results[i].Frequency;
+			for (i = 0; i < results.length; i++) {
+				jsonReply[results[i].Name] = results[i].Frequency;
+			}
 		}
 	}
 
 	jsonReply["status"] = [];
-	jsonReply["status"].push("OK");
+	jsonReply["status"].push(errorType);
 
 	jsonReply = JSON.stringify(jsonReply);
 
@@ -72,12 +74,15 @@ function reply(results) {
 	response.write(jsonReply, function (err) { response.end() } );
 }
 
+function getPrefsCallback(results) {
+	reply(results, "OK");
+}
 
 // need to query UserPreferences, modify reply() ^^^ to handle user logins and return a JSONified form of UserPrefs
 function getUserPreferences() {
 	let query = userPrefQueryStr + clientID + "\"";
 
-	mySQLClient.queryAndCallback(query, reply);
+	mySQLClient.queryAndCallback(query, getPrefsCallback);
 }
 
 function userCreationCallback(results) {
@@ -86,6 +91,12 @@ function userCreationCallback(results) {
 }
 
 function createNewUser() {
+	if (!("name" in clientRequest) || !("email" in clientRequest)) {
+		reply([], "USER_CREATE_ARGS_MISSING");
+
+		return;
+	}
+
 	let query = userInsertQueryStr + "\"" + clientRequest.name + "\", \"" + clientRequest.email + "\")";
 
 	mySQLClient.queryAndCallback(query, userCreationCallback);
@@ -95,7 +106,7 @@ function createNewUser() {
 function attractionTypeCallback(results) {
 	attractionTypes = results;
 
-	reply([]);
+	reply([], "OK");
 }
 
 function userQueryCallback(results) {
@@ -113,19 +124,45 @@ function queryAttractionTypes() {
 	mySQLClient.queryAndCallback(attractionTypeQueryStr, attractionTypeCallback);
 }
 
+function userQueryCallback(results) {
+	reply(results, "OK");
+}
+
 function queryUserExistence() {
+	if (!("email" in clientRequest)) {
+		reply([], "USER_QUERY_ARGS_MISSING");
+
+		return;
+	}
+
 	let query = userIDQueryStr + clientRequest.email + "\"";
 
 	mySQLClient.queryAndCallback(query, userQueryCallback);
 }
 
+function clearHistoryCallback(results) {
+	reply([], "OK");
+}
+
 function clearUserHistory() {
+	if (!("userID" in clientRequest)) {
+		reply([], "HIST_CLEAR_ARGS_MISSING");
+
+		return;
+	}
+
 	let query = userClearHistoryQueryStr + clientRequest.userID + "\"";
 
-	mySQLClient.queryAndCallback(query, reply);
+	mySQLClient.queryAndCallback(query, clearHistoryCallback);
 }
 
 function setUserHistory() {
+	if (!("history" in clientRequest) || !("userID" in clientRequest)) {
+		reply([], "ATTR_MERGE_ARGS_MISSING");
+
+		return;
+	}
+
 	let historyStr = clientRequest.history.replace("[", "{").replace("]", "}");
 	let historyDict = JSON.parse(historyStr);
 
@@ -144,13 +181,19 @@ function setUserHistory() {
 	};
 
 	pythonshell.run(attr_replace_script, options, function (error, results) {
-		if (error) throw error;
+		if (error) reply([], "ATTR_MERGE_FAILED");
 		
-		reply([]);
+		reply([], "OK");
 	});
 }
 
 function deleteUser() {
+	if (!("userID" in clientRequest)) {
+		reply([], "USER_DELETE_ARGS_MISSING");
+
+		return;
+	}
+
 	let query = userDeleteQueryStr + clientRequest.userID + "\"";
 
 	mySQLClient.queryAndCallback(query, clearUserHistory);
@@ -181,5 +224,10 @@ exports.sync = (httpResponse, jsonRequest) => {
     }
     else if (jsonRequest.syncType == "deleteUser") {
     	deleteUser();
+    }
+    else {
+    	reply([], "BAD_REQUEST_TYPE");
+
+    	return;
     }
 }

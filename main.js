@@ -39,9 +39,11 @@ function setModuleTraceLevel (newLevel) {
 function handleJSONRequest (response, jsonRequest) {
     if (jsonRequest.requestType == "query") {
         queryRequest.query(response, jsonRequest);
-
     } else if (jsonRequest.requestType == "dbsync") {
         clientSync.sync(response, jsonRequest);        
+    } else {
+        jsonRequest.syncType = "error"
+        clientSync.sync(response, jsonRequest);
     }
 }
 

@@ -68,7 +68,10 @@ function distance (lat1, lng1, lat2, lng2) {
 	return (d * 1000);		//Return in meters
 }
 
-function writeResponse () {
+function writeResponse (errorType) {
+	jsonReply["status"] = [];
+	jsonReply["status"].push(errorType);
+
 	jsonReply = JSON.stringify(jsonReply);
 
 	log(logging.trace_level, "Responding with " + jsonReply);
@@ -103,7 +106,7 @@ function blipLookupCallback (results) {
 		}
 	}
 
-	writeResponse();
+	writeResponse("OK");
 }
 
 /**
@@ -129,7 +132,7 @@ function mtQuery () {
 	};
 
 	pythonshell.run(query_script, options, function (error, results) {
-		if (error) throw error;
+		if (error) writeResponse("QUERY_FAILED");
 
 		placeLookupComplete(results);
 	});
@@ -197,6 +200,32 @@ exports.query = (httpResponse, jsonRequest) => {
 	response = httpResponse;
 	clientRequest = jsonRequest;
 	jsonReply = {};
+
+	if (!("latitude" in jsonRequest) || !("longitude" in jsonRequest)) {
+		writeResponse("LOCATION_MISSING");
+
+		return;
+	}
+
+	if (!("radius" in jsonRequest)) {
+		writeResponse("SEARCH_RADIUS_MISSING");
+
+		return;
+	}
+
+	if (!("types" in jsonRequest)) {
+		writeResponse("ATTRACTION_TYPES_MISSING");
+
+		return;
+	}
+
+	if (!("minRating" in jsonRequest)) {
+		jsonRequest.minRating = 0.0;
+	}
+
+	if (!("maxPrice" in jsonRequest)) {
+		jsonRequest.maxPrice = 3;
+	}
 
 	let location = [jsonRequest.latitude, jsonRequest.longitude];
 
