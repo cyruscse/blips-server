@@ -95,7 +95,7 @@ def queryPlaces(attraction, lc_id, cell):
 
 	for result in places["results"]:
 		row = []
-		
+
 		# Sometimes, Google returns non-ASCII characters in the name.
 		# Python doesn't like non-ASCII characters. Replace non-ASCII characters
 		# with nothing to prevent a crash.
@@ -105,8 +105,20 @@ def queryPlaces(attraction, lc_id, cell):
 		row.append(lc_id)
 		row.append(attraction)
 		row.append(result["name"].encode('utf-8'))
-		row.append(result["rating"])
-		row.append(result["price_level"])
+
+		# The rating and price_level tags aren't always included
+		# (usually in newer entries), check to see if this attraction
+		# has it, otherwise we crash.
+		if "rating" in result:
+			row.append(result["rating"])
+		else:
+			row.append("0")
+
+		if "price_level" in result:
+			row.append(result["price_level"])
+		else:
+			row.append("0")
+
 		row.append(result["geometry"]["location"]["lat"])
 		row.append(result["geometry"]["location"]["lng"])
 
