@@ -79,38 +79,6 @@ function databaseReadyCallback(emptyDB) {
 // Set this module as an observer of mysql_client
 mySQLClient.addDBReadyCallback(databaseReadyCallback);
 
-// Queries the Google API for nearby attractions, given a latitude, longitude, attractionType and search radius
-// This also handles placesNearby pagination. If placesNearby returns 20 results, there are more results waiting.
-// The API returns a next page token. If the API is called again with this token, it gets the next page of results.
-// If the API call is successful, the callback function is called with the data returned from the Google API
-exports.placesNearbyToLocation = (location, attractionType, requestedRadius, openNow, nextPageToken, callback) => {
-    if (nextPageToken.length != 0) {
-  		// Handle next page token
-    	mapsClient.placesNearby({ location: location, pagetoken: nextPageToken }).asPromise()
-    		.then ((mapResponse) => {
-    			var str = JSON.stringify(mapResponse.json);
-    			log(logging.trace_level, str);
-    			callback(mapResponse.json);
-    		})
-    		.catch ((err) => {
-    			var str = JSON.stringify(err.json);
-    			log(logging.error_level, str);
-    		});
-    }
-    else {
-	    mapsClient.placesNearby({ location: location, radius: requestedRadius, opennow: openNow, type: attractionType, pagetoken: nextPageToken }).asPromise()
-		    .then ((mapResponse) => {
-		    	var str = JSON.stringify(mapResponse.json);
-		    	log(logging.trace_level, str);
-		    	callback(mapResponse.json);
-		    })
-		    .catch ((err) => {
-		    	var str = JSON.stringify(err.json);
-		        log(logging.error_level, str);
-		    });
-    }
-}
-
 // Queries Google API for city, province, and country name of given latitude and longitude
 exports.geocodeLatLng = (location, callback) => {
 	mapsClient.reverseGeocode({ latlng: location }).asPromise()

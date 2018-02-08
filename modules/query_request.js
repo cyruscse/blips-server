@@ -23,7 +23,7 @@ function setModuleTraceLevel (newLevel) {
 
 const query_script = "modules/mt_query.py"
 
-const blipQuery = "select Blips.Name, Blips.Latitude, Blips.Longitude, AttractionTypes.ProperName, Blips.Rating, Blips.Price from Blips inner join AttractionTypes on Blips.Type = AttractionTypes.Name where ";
+const blipQuery = "select Blips.Name, Blips.Latitude, Blips.Longitude, AttractionTypes.ProperName, Blips.Rating, Blips.Price, Blips.PhotoRef from Blips inner join AttractionTypes on Blips.Type = AttractionTypes.Name where ";
 
 // JSON tags returned from Google API calls, used to filter
 // response from Google
@@ -99,6 +99,7 @@ function blipLookupCallback (results) {
 				type: results[i].ProperName,
 				rating: results[i].Rating,
 				price: results[i].Price,
+				photo: results[i].PhotoRef,
 				latitude: results[i].Latitude,
 				longitude: results[i].Longitude
 			};
@@ -134,7 +135,11 @@ function mtQuery () {
 	};
 
 	pythonshell.run(query_script, options, function (error, results) {
-		if (error) writeResponse("QUERY_FAILED");
+		if (error) {
+			console.log(error);
+			writeResponse("QUERY_FAILED");
+			return;
+		}
 
 		placeLookupComplete(results);
 	});
