@@ -92,6 +92,8 @@ function userCreationCallback(results) {
 
 function createNewUser() {
 	if (!("name" in clientRequest) || !("email" in clientRequest)) {
+		log(logging.warning_level, "User creation arguments missing (clientRequest: " + clientRequest + ")\n");
+
 		reply([], "USER_CREATE_ARGS_MISSING");
 
 		return;
@@ -130,6 +132,8 @@ function userQueryCallback(results) {
 
 function queryUserExistence() {
 	if (!("email" in clientRequest)) {
+		log(logging.warning_level, "User query arguments missing (clientRequest: " + clientRequest + ")\n");
+
 		reply([], "USER_QUERY_ARGS_MISSING");
 
 		return;
@@ -146,6 +150,8 @@ function clearHistoryCallback(results) {
 
 function clearUserHistory() {
 	if (!("userID" in clientRequest)) {
+		log(logging.warning_level, "History clear arguments missing (clientRequest: " + clientRequest + ")\n");
+
 		reply([], "HIST_CLEAR_ARGS_MISSING");
 
 		return;
@@ -158,6 +164,7 @@ function clearUserHistory() {
 
 function setUserHistory() {
 	if (!("history" in clientRequest) || !("userID" in clientRequest)) {
+		log(logging.warning_level, "User merge arguments missing (clientRequest: " + clientRequest + ")\n");
 		reply([], "ATTR_MERGE_ARGS_MISSING");
 
 		return;
@@ -181,7 +188,12 @@ function setUserHistory() {
 	};
 
 	pythonshell.run(attr_replace_script, options, function (error, results) {
-		if (error) reply([], "ATTR_MERGE_FAILED");
+		if (error) {
+			log(logging.warning_level, "Failed to merge user and guest histories (clientRequest: " + clientRequest + ")\n");
+			reply([], "ATTR_MERGE_FAILED");
+
+			return;
+		}
 		
 		reply([], "OK");
 	});
@@ -189,6 +201,7 @@ function setUserHistory() {
 
 function deleteUser() {
 	if (!("userID" in clientRequest)) {
+		log(logging.warning_level, "User deletion failed (clientRequest: " + clientRequest + ")\n");
 		reply([], "USER_DELETE_ARGS_MISSING");
 
 		return;
