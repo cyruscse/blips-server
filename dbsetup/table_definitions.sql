@@ -17,7 +17,6 @@ create table Blips
 		Name char(100) NOT NULL,
 		Rating float(2, 1) NOT NULL,
 		Price int NOT NULL,
-		PhotoRef char(200) NOT NULL,
 		Latitude float(10, 7) NOT NULL,
 		Longitude float(10, 7) NOT NULL,
 		PRIMARY KEY (ID, LCID));

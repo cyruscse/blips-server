@@ -19,7 +19,7 @@ location_cache_query_id = "select ID from LocationCache where "
 location_cache_insert = "insert into LocationCache values ("
 location_cache_update = "update LocationCache set CachedTime = (now()) where Type = \""
 blip_cache_clear = "delete from Blips where LCID = \""
-blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Rating, Price, PhotoRef, Latitude, Longitude ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Rating, Price, Latitude, Longitude ) values (%s, %s, %s, %s, %s, %s, %s, %s)"
 blip_existence = "select count(*) from Blips where LCID = \""
 unix_timestamp_query = "select UNIX_TIMESTAMP (\'"
 user_preference_update = "insert into UserPreferences (UID, AID, Frequency) select (\""
@@ -119,19 +119,6 @@ def queryPlaces(attraction, lc_id, cell):
 			row.append(result["price_level"])
 		else:
 			row.append("0")
-
-		# photo_reference is a ~190 character unique ID that corresponds to an image
-		# in Google's DB. We save the ID and give it to the client, it's up to the client to download the picture.
-		# Like price levels and ratings, not all attractions
-		# have pictures in Google's DB.
-		if "photos" in result:
-			for photo_ref in result["photos"]:
-				if "photo_reference" in photo_ref:
-					row.append(photo_ref["photo_reference"])
-				else:
-					row.append("0")
-		else:
-			row.append("0");
 
 		row.append(result["geometry"]["location"]["lat"])
 		row.append(result["geometry"]["location"]["lng"])
