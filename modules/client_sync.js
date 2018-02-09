@@ -4,6 +4,7 @@
  */
 
 const mySQLClient = require('./mysql_client.js');
+const googleClient = require('./google_client.js');
 const logging = require('./logging.js');
 const pythonshell = require('python-shell');
 
@@ -44,7 +45,7 @@ function reply(results, errorType) {
 	if (errorType == "OK") {
 		if (clientRequest.syncType == "getattractions") {
 			var attributeData = {
-				city_count: 1
+				client_key: googleClient.getClientKey()
 			};
 
 			jsonReply["attributes"] = [];

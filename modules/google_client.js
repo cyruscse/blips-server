@@ -15,6 +15,8 @@ var mapsClient = maps.createClient({
     Promise   : Promise
 });
 
+const clientKey = 'AIzaSyB9_LQ5Osmo-XNjAMMqfNwc4qG_mEyXZ3Q';
+
 // Logging Module setup
 const log_file = '/tmp/google_client.log';
 const translation_file = 'dbsetup/attraction_translate.txt'
@@ -103,4 +105,8 @@ exports.geocodeLocation = (locationStr, callback) => {
 			var str = JSON.stringify(err.json);
 	        log(logging.error_level, str);
 		});
+}
+
+exports.getClientKey = () => {
+	return clientKey;
 }
