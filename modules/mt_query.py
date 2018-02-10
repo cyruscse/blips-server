@@ -9,6 +9,7 @@ import pymysql
 import sys
 import math
 import time
+import os.path
 
 # Initialize Google API, using our API key
 gmaps = googlemaps.Client(key = 'AIzaSyB0oGuvJF0foOJxAwSj_pxlsLJdijmsoFw')
@@ -19,7 +20,7 @@ location_cache_query_id = "select ID from LocationCache where "
 location_cache_insert = "insert into LocationCache values ("
 location_cache_update = "update LocationCache set CachedTime = (now()) where Type = \""
 blip_cache_clear = "delete from Blips where LCID = \""
-blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Rating, Price, Latitude, Longitude ) values (%s, %s, %s, %s, %s, %s, %s, %s)"
+blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Rating, Price, IconURL, Latitude, Longitude ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
 blip_existence = "select count(*) from Blips where LCID = \""
 unix_timestamp_query = "select UNIX_TIMESTAMP (\'"
 user_preference_update = "insert into UserPreferences (UID, AID, Frequency) select (\""
@@ -101,7 +102,7 @@ def queryPlaces(attraction, lc_id, cell):
 		# with nothing to prevent a crash.
 		''.join([x for x in result["name"] if ord(x) < 128]);
 
-		row.append(result["id"])
+		row.append(result["place_id"])
 		row.append(lc_id)
 		row.append(attraction)
 		row.append(result["name"].encode('utf-8'))
@@ -117,6 +118,12 @@ def queryPlaces(attraction, lc_id, cell):
 		# Google doesn't have price levels for every attraction.
 		if "price_level" in result:
 			row.append(result["price_level"])
+		else:
+			row.append("0")
+
+		if "icon" in result:
+			icon_url = result["icon"]
+			row.append(os.path.basename(icon_url))
 		else:
 			row.append("0")
 
