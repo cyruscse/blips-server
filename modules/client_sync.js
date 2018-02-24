@@ -16,6 +16,7 @@ const userInsertQueryStr = "insert into Users values (NULL, ";
 const userDeleteQueryStr = "delete from Users where ID = \"";
 const userPrefQueryStr = "select AttractionTypes.Name, UserPreferences.Frequency from UserPreferences inner join AttractionTypes on UserPreferences.AID = AttractionTypes.ID where UserPreferences.UID = \""
 const userClearHistoryQueryStr = "delete from UserPreferences where UID = \"";
+const userChangeAutoOptionsQueryStr = "insert into UserAutoQueryOptions ("
 
 // Logging Module setup
 const log_file = '/tmp/client_sync.log';
@@ -55,7 +56,7 @@ function reply(results, errorType) {
 
 			for (type in attractionTypes) {
 				jsonReply["attraction_types"].push(attractionTypes[type]);
-			}		
+			}
 		}
 		else if (clientRequest.syncType == "login") {
 			jsonReply["userID"] = clientID;
@@ -213,6 +214,94 @@ function deleteUser() {
 	mySQLClient.queryAndCallback(query, clearUserHistory);
 }
 
+function updateAutoQueryOptionsCallback(results) {
+	reply([], "OK");
+}
+
+function updateAutoQueryOptions() {
+	if (!("userID" in clientRequest) || !("options" in clientRequest)) {
+		log(logging.warning_level, "User deletion failed (clientRequest: " + clientRequest + ")\n");
+		reply([], "AUTO_QUERY_OPTIONS_ARGS_MISSING");
+
+		return;
+	}
+
+	var columns = new Array();
+	var colVals = new Array();
+
+	columns.push("UID");
+	colVals.push(clientRequest.userID);
+
+	for (i = 0; i < clientRequest.options.length; i++) {
+		if (clientRequest.options[i].enabled != undefined) {
+			columns.push("Enabled");
+			colVals.push(clientRequest.options[i].enabled);
+		}
+
+		if (clientRequest.options[i].typeGrabLength != undefined) {
+			columns.push("TypeGrabLength");
+			colVals.push(clientRequest.options[i].typeGrabLength);
+		}
+
+		if (clientRequest.options[i].openNow != undefined) {
+			columns.push("OpenNow");
+			colVals.push(clientRequest.options[i].openNow);
+		}
+
+		if (clientRequest.options[i].rating != undefined) {
+			columns.push("Rating");
+			colVals.push(clientRequest.options[i].rating);
+		}
+
+		if (clientRequest.options[i].priceRange != undefined) {
+			columns.push("PriceRange");
+			colVals.push(clientRequest.options[i].priceRange);
+		}
+	}
+
+	if (columns.length == 0) {
+    	reply([], "BAD_AUTO_QUERY_OPTION");
+
+    	return;
+    }
+
+    var queryStr = userChangeAutoOptionsQueryStr;
+
+    for (i = 0; i < columns.length; i++) {
+    	queryStr = queryStr + columns[i];
+
+    	if (i < (columns.length - 1)) {
+    		queryStr += ", ";
+    	} else {
+    		queryStr += ")";
+    	}
+    }
+
+    queryStr = queryStr + " VALUES (";
+
+    for (i = 0; i < colVals.length; i++) {
+    	queryStr = queryStr + colVals[i];
+
+    	if (i < (colVals.length - 1)) {
+    		queryStr += ", ";
+    	} else {
+    		queryStr += ")";
+    	}
+    }
+
+    queryStr = queryStr + " ON DUPLICATE KEY UPDATE ";
+
+    for (i = 1; i < columns.length; i++) {
+    	queryStr = queryStr + columns[i] + "=" + colVals[i];
+
+    	if (i < (columns.length - 1)) {
+    		queryStr += ", ";
+    	}
+    }
+
+    mySQLClient.queryAndCallback(queryStr, updateAutoQueryOptionsCallback);
+}
+
 /**
  * Public facing function for client_sync.
  *
@@ -226,20 +315,17 @@ exports.sync = (httpResponse, jsonRequest) => {
 
 	if (jsonRequest.syncType == "getattractions") {
         queryAttractionTypes();
-    }
-    else if (jsonRequest.syncType == "login") {
+    } else if (jsonRequest.syncType == "login") {
         queryUserExistence();       
-    }
-    else if (jsonRequest.syncType == "clearHistory") {
+    } else if (jsonRequest.syncType == "clearHistory") {
     	clearUserHistory();
-    }
-    else if (jsonRequest.syncType == "setHistory") {
+    } else if (jsonRequest.syncType == "setHistory") {
     	setUserHistory();
-    }
-    else if (jsonRequest.syncType == "deleteUser") {
+    } else if (jsonRequest.syncType == "deleteUser") {
     	deleteUser();
-    }
-    else {
+    } else if (jsonRequest.syncType == "updateAutoQueryOptions") {
+    	updateAutoQueryOptions();
+    } else {
     	reply([], "BAD_REQUEST_TYPE");
 
     	return;

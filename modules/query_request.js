@@ -73,7 +73,7 @@ function writeResponse (errorType) {
 	jsonReply["status"].push(errorType);
 
 	if (errorType != "OK") {
-		log(logging.warning_level, "Query failed (clientRequest: " + clientRequest + ")\n");
+		log(logging.warning_level, "Query failed (clientRequest: " + clientRequest.toString() + ")\n");
 	}
 
 	jsonReply = JSON.stringify(jsonReply);
@@ -141,7 +141,7 @@ function mtQuery () {
 
 	pythonshell.run(query_script, options, function (error, results) {
 		if (error) {
-			log(logging.warning_level, "mt_query failed (clientRequest: " + clientRequest + ")\n");
+			log(logging.warning_level, "mt_query failed (clientRequest: " + clientRequest.toString() + ")\n");
 			log(logging.warning_level, "mt_query failure specifics: " + error + "\n");
 
 			writeResponse("QUERY_FAILED");

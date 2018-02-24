@@ -39,3 +39,12 @@ create table UserPreferences
 		AID int,
 		Frequency int,
 		PRIMARY KEY (UID, AID));
+
+/* UID -> User ID, key into Users table */
+create table UserAutoQueryOptions
+	(UID varchar(255) PRIMARY KEY,
+		Enabled bool NOT NULL DEFAULT 1,
+		TypeGrabLength int NOT NULL DEFAULT 0,
+		OpenNow bool NOT NULL DEFAULT 1,
+		Rating float(2, 1) NOT NULL DEFAULT '0.0',
+		PriceRange int NOT NULL DEFAULT 0);
