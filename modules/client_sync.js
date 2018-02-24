@@ -63,17 +63,39 @@ function reply(results, errorType) {
 			}
 		}
 		else if (clientRequest.syncType == "login") {
-			jsonReply["userID"] = clientID;
+			jsonReply["userID"] = [];
+			jsonReply["userID"].push(clientID);
+
+			jsonReply["history"] = [];
 
 			for (i = 0; i < userPrefsResults.length; i++) {
-				jsonReply[userPrefsResults[i].Name] = userPrefsResults[i].Frequency;
+				jsonReply["history"].push({
+					"type": userPrefsResults[i].Name,
+					"frequency": userPrefsResults[i].Frequency
+				});
 			}
 
-			jsonReply["enabled"] = results[0].Enabled;
-			jsonReply["typeGrabLength"] = results[0].TypeGrabLength;
-			jsonReply["openNow"] = results[0].OpenNow;
-			jsonReply["rating"] = results[0].Rating;
-			jsonReply["priceRange"] = results[0].PriceRange;
+			jsonReply["autoQueryOptions"] = [];
+
+			jsonReply["autoQueryOptions"].push({
+				"enabled": results[0].Enabled
+			});
+
+			jsonReply["autoQueryOptions"].push({
+				"typeGrabLength": results[0].TypeGrabLength
+			});
+
+			jsonReply["autoQueryOptions"].push({
+				"openNow": results[0].OpenNow
+			});
+
+			jsonReply["autoQueryOptions"].push({
+				"rating": results[0].Rating
+			});
+
+			jsonReply["autoQueryOptions"].push({
+				"priceRange": results[0].PriceRange
+			});
 		}
 	}
 
@@ -98,7 +120,6 @@ function getPrefsCallback(results) {
 	mySQLClient.queryAndCallback(query, getAutoOptionsCallback);
 }
 
-// need to query UserPreferences, modify reply() ^^^ to handle user logins and return a JSONified form of UserPrefs
 function getUserPreferences(results) {
 	let query = userPrefQueryStr + clientID + "\"";
 
