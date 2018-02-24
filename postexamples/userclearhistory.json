@@ -1,0 +1,5 @@
+{
+	"requestType"   : "dbsync",
+	"syncType"      : "clearHistory",
+	"userID"        : "1"
+}

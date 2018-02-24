@@ -1,6 +1,6 @@
 {
 	"requestType"   : "dbsync",
-	"userID"        : "55",
+	"userID"        : "1",
 	"syncType"      : "updateAutoQueryOptions",
 	"options"       : [ { "enabled" : "true" }, { "typeGrabLength" : "4" }, { "openNow" : "true" }, { "rating" : "2.6" }, { "priceRange" : "2" } ]
 }

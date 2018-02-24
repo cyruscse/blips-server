@@ -14,9 +14,11 @@ const attractionTypeQueryStr = "select * from AttractionTypes";
 const userIDQueryStr = "select * from Users where Email = \"";
 const userInsertQueryStr = "insert into Users values (NULL, ";
 const userDeleteQueryStr = "delete from Users where ID = \"";
-const userPrefQueryStr = "select AttractionTypes.Name, UserPreferences.Frequency from UserPreferences inner join AttractionTypes on UserPreferences.AID = AttractionTypes.ID where UserPreferences.UID = \""
+const userPrefQueryStr = 'select AttractionTypes.Name, UserPreferences.Frequency from UserPreferences inner join AttractionTypes on UserPreferences.AID = AttractionTypes.ID where UserPreferences.UID = \"';
 const userClearHistoryQueryStr = "delete from UserPreferences where UID = \"";
 const userChangeAutoOptionsQueryStr = "insert into UserAutoQueryOptions ("
+const userAutoOptionsQueryStr = "select Enabled, TypeGrabLength, OpenNow, Rating, PriceRange from UserAutoQueryOptions where UID = \"";
+const userClearAutoOptionsQueryStr = "delete from UserAutoQueryOptions where UID = \"";
 
 // Logging Module setup
 const log_file = '/tmp/client_sync.log';
@@ -34,6 +36,8 @@ var clientID;
 var clientRequest;
 var response;
 var attractionTypes;
+
+var userPrefsResults;
 
 /**
  * Form JSON containing list of attraction types to sync to client.
@@ -61,9 +65,15 @@ function reply(results, errorType) {
 		else if (clientRequest.syncType == "login") {
 			jsonReply["userID"] = clientID;
 
-			for (i = 0; i < results.length; i++) {
-				jsonReply[results[i].Name] = results[i].Frequency;
+			for (i = 0; i < userPrefsResults.length; i++) {
+				jsonReply[userPrefsResults[i].Name] = userPrefsResults[i].Frequency;
 			}
+
+			jsonReply["enabled"] = results[0].Enabled;
+			jsonReply["typeGrabLength"] = results[0].TypeGrabLength;
+			jsonReply["openNow"] = results[0].OpenNow;
+			jsonReply["rating"] = results[0].Rating;
+			jsonReply["priceRange"] = results[0].PriceRange;
 		}
 	}
 
@@ -76,12 +86,20 @@ function reply(results, errorType) {
 	response.write(jsonReply, function (err) { response.end() } );
 }
 
-function getPrefsCallback(results) {
+function getAutoOptionsCallback(results) {
 	reply(results, "OK");
 }
 
+function getPrefsCallback(results) {
+	userPrefsResults = results;
+
+	let query = userAutoOptionsQueryStr + clientID + "\"";
+
+	mySQLClient.queryAndCallback(query, getAutoOptionsCallback);
+}
+
 // need to query UserPreferences, modify reply() ^^^ to handle user logins and return a JSONified form of UserPrefs
-function getUserPreferences() {
+function getUserPreferences(results) {
 	let query = userPrefQueryStr + clientID + "\"";
 
 	mySQLClient.queryAndCallback(query, getPrefsCallback);
@@ -89,7 +107,10 @@ function getUserPreferences() {
 
 function userCreationCallback(results) {
 	clientID = results.insertId;
-	getUserPreferences();
+
+	let query = userChangeAutoOptionsQueryStr + "UID) VALUES (" + clientID + ")";
+
+	mySQLClient.queryAndCallback(query, getUserPreferences);
 }
 
 function createNewUser() {
@@ -128,10 +149,6 @@ function queryAttractionTypes() {
 	mySQLClient.queryAndCallback(attractionTypeQueryStr, attractionTypeCallback);
 }
 
-function userQueryCallback(results) {
-	reply(results, "OK");
-}
-
 function queryUserExistence() {
 	if (!("email" in clientRequest)) {
 		log(logging.warning_level, "User query arguments missing (clientRequest: " + clientRequest + ")\n");
@@ -146,8 +163,14 @@ function queryUserExistence() {
 	mySQLClient.queryAndCallback(query, userQueryCallback);
 }
 
-function clearHistoryCallback(results) {
+function clearAutoOptionsCallback(results) {
 	reply([], "OK");
+}
+
+function clearHistoryCallback(results) {
+	let query = userClearAutoOptionsQueryStr + clientRequest.userID + "\"";
+
+	mySQLClient.queryAndCallback(query, clearAutoOptionsCallback);
 }
 
 function clearUserHistory() {
@@ -316,7 +339,7 @@ exports.sync = (httpResponse, jsonRequest) => {
 	if (jsonRequest.syncType == "getattractions") {
         queryAttractionTypes();
     } else if (jsonRequest.syncType == "login") {
-        queryUserExistence();       
+        queryUserExistence();
     } else if (jsonRequest.syncType == "clearHistory") {
     	clearUserHistory();
     } else if (jsonRequest.syncType == "setHistory") {
