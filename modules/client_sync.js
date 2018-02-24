@@ -69,10 +69,9 @@ function reply(results, errorType) {
 			jsonReply["history"] = [];
 
 			for (i = 0; i < userPrefsResults.length; i++) {
-				jsonReply["history"].push({
-					"type": userPrefsResults[i].Name,
-					"frequency": userPrefsResults[i].Frequency
-				});
+				let entry = {};
+				entry[userPrefsResults[i].Name] = userPrefsResults[i].Frequency;
+				jsonReply["history"].push(entry);
 			}
 
 			jsonReply["autoQueryOptions"] = [];
