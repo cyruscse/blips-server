@@ -22,6 +22,7 @@ const userClearAutoOptionsQueryStr = "delete from UserAutoQueryOptions where UID
 const blipSaveQueryStr = "insert into UserSavedBlips values (\"";
 const blipUnsaveQueryStr = "delete from UserSavedBlips where UID = \"";
 const savedBlipsQueryStr = "select Blips.ID, Blips.Name, Blips.Type, Blips.Rating, Blips.Price, Blips.IconURL, Blips.Latitude, Blips.Longitude from Blips inner join UserSavedBlips on Blips.ID = UserSavedBlips.BID where UserSavedBlips.UID = \"";
+const clearSavedBlipsQueryStr = "delete from UserSavedBlips where UID = \"";
 
 // Logging Module setup
 const log_file = '/tmp/client_sync.log';
@@ -212,8 +213,14 @@ function queryUserExistence() {
 	mySQLClient.queryAndCallback(query, userQueryCallback);
 }
 
-function clearAutoOptionsCallback(results) {
+function clearSavedBlipsCallback(results) {
 	reply([], "OK");
+}
+
+function clearAutoOptionsCallback(results) {
+	let query = clearSavedBlipsQueryStr + clientRequest.userID + "\"";
+
+	mySQLClient.queryAndCallback(query, clearSavedBlipsCallback);
 }
 
 function clearHistoryCallback(results) {
