@@ -20,6 +20,7 @@ const userChangeAutoOptionsQueryStr = "insert into UserAutoQueryOptions ("
 const userAutoOptionsQueryStr = "select Enabled, TypeGrabLength, OpenNow, Rating, PriceRange from UserAutoQueryOptions where UID = \"";
 const userClearAutoOptionsQueryStr = "delete from UserAutoQueryOptions where UID = \"";
 const blipSaveQueryStr = "insert into UserSavedBlips values (\"";
+const blipUnsaveQueryStr = "delete from UserSavedBlips where UID = \"";
 const savedBlipsQueryStr = "select Blips.ID, Blips.Name, Blips.Type, Blips.Rating, Blips.Price, Blips.IconURL, Blips.Latitude, Blips.Longitude from Blips inner join UserSavedBlips on Blips.ID = UserSavedBlips.BID where UserSavedBlips.UID = \"";
 
 // Logging Module setup
@@ -390,6 +391,23 @@ function saveBlip() {
 	mySQLClient.queryAndCallback(queryStr, saveBlipQueryCallback);
 }
 
+function unsaveBlipQueryCallback(results) {
+	reply([], "OK");
+}
+
+function unsaveBlip() {
+	if (!("userID" in clientRequest) || !("blipID" in clientRequest)) {
+		log(logging.warning_level, "Blip unsave failed (clientRequest: " + clientRequest + ")\n");
+		reply([], "BLIP_UNSAVE_ARGS_MISSING");
+
+		return;
+	}
+
+	let queryStr = blipUnsaveQueryStr + clientRequest.userID + "\" and \"" + clientRequest.blipID + "\")";
+
+	mySQLClient.queryAndCallback(queryStr, unsaveBlipQueryCallback);
+}
+
 /**
  * Public facing function for client_sync.
  *
@@ -415,6 +433,8 @@ exports.sync = (httpResponse, jsonRequest) => {
     	updateAutoQueryOptions();
     } else if (jsonRequest.syncType == "saveBlip") {
     	saveBlip();
+    } else if (jsonRequest.syncType == "unsaveBlip") {
+    	unsaveBlip();
     } else {
     	reply([], "BAD_REQUEST_TYPE");
 
