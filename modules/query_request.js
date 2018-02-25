@@ -23,7 +23,7 @@ function setModuleTraceLevel (newLevel) {
 
 const query_script = "modules/mt_query.py"
 
-const blipQuery = "select Blips.Name, Blips.Latitude, Blips.Longitude, AttractionTypes.ProperName, Blips.Rating, Blips.Price, Blips.ID, Blips.IconURL from Blips inner join AttractionTypes on Blips.Type = AttractionTypes.Name where ";
+const blipQuery = "select Blips.Name, Blips.Latitude, Blips.Longitude, AttractionTypes.ProperName, Blips.Rating, Blips.Price, Blips.ID, Blips.IconURL, LocationCache.city, LocationCache.country from Blips inner join AttractionTypes on Blips.Type = AttractionTypes.Name inner join LocationCache on Blips.LCID = LocationCache.ID where ";
 
 // JSON tags returned from Google API calls, used to filter
 // response from Google
@@ -106,7 +106,9 @@ function blipLookupCallback (results) {
 				placeID: results[i].ID,
 				icon: results[i].IconURL,
 				latitude: results[i].Latitude,
-				longitude: results[i].Longitude
+				longitude: results[i].Longitude,
+				city: results[i].city,
+				country: results[i].country
 			};
 
 			jsonReply["blips"].push(data);
