@@ -52,5 +52,6 @@ create table UserAutoQueryOptions
 /* UID -> User ID, key into Users table */
 /* BID -> Blip ID, key into Blips table */
 create table UserSavedBlips
-	(UID varchar(255) PRIMARY KEY,
-		BID char(255) NOT NULL);
+	(UID varchar(255),
+		BID char(255) NOT NULL,
+		PRIMARY KEY (UID, BID));
