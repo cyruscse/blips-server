@@ -403,7 +403,7 @@ function unsaveBlip() {
 		return;
 	}
 
-	let queryStr = blipUnsaveQueryStr + clientRequest.userID + "\" and \"" + clientRequest.blipID + "\")";
+	let queryStr = blipUnsaveQueryStr + clientRequest.userID + "\" and BID=\"" + clientRequest.blipID + "\"";
 
 	mySQLClient.queryAndCallback(queryStr, unsaveBlipQueryCallback);
 }
