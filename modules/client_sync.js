@@ -20,6 +20,7 @@ const userChangeAutoOptionsQueryStr = "insert into UserAutoQueryOptions ("
 const userAutoOptionsQueryStr = "select Enabled, TypeGrabLength, OpenNow, Rating, PriceRange from UserAutoQueryOptions where UID = \"";
 const userClearAutoOptionsQueryStr = "delete from UserAutoQueryOptions where UID = \"";
 const blipSaveQueryStr = "insert into UserSavedBlips values (\"";
+const savedBlipsQueryStr = "select Blips.ID, Blips.Name, Blips.Type, Blips.Rating, Blips.Price, Blips.IconURL, Blips.Latitude, Blips.Longitude from Blips inner join UserSavedBlips on Blips.ID = UserSavedBlips.BID where UserSavedBlips.UID = \"";
 
 // Logging Module setup
 const log_file = '/tmp/client_sync.log';
@@ -39,6 +40,7 @@ var response;
 var attractionTypes;
 
 var userPrefsResults;
+var autoQueryOptionsResults;
 
 /**
  * Form JSON containing list of attraction types to sync to client.
@@ -78,24 +80,41 @@ function reply(results, errorType) {
 			jsonReply["autoQueryOptions"] = [];
 
 			jsonReply["autoQueryOptions"].push({
-				"enabled": results[0].Enabled
+				"enabled": autoQueryOptionsResults[0].Enabled
 			});
 
 			jsonReply["autoQueryOptions"].push({
-				"typeGrabLength": results[0].TypeGrabLength
+				"typeGrabLength": autoQueryOptionsResults[0].TypeGrabLength
 			});
 
 			jsonReply["autoQueryOptions"].push({
-				"openNow": results[0].OpenNow
+				"openNow": autoQueryOptionsResults[0].OpenNow
 			});
 
 			jsonReply["autoQueryOptions"].push({
-				"rating": results[0].Rating
+				"rating": autoQueryOptionsResults[0].Rating
 			});
 
 			jsonReply["autoQueryOptions"].push({
-				"priceRange": results[0].PriceRange
+				"priceRange": autoQueryOptionsResults[0].PriceRange
 			});
+
+			jsonReply["savedBlips"] = [];
+
+			for (i = 0; i < results.length; i++) {
+				let data = {
+					name: results[i].Name,
+					type: results[i].Type,
+					rating: results[i].Rating,
+					price: results[i].Price,
+					placeID: results[i].ID,
+					icon: results[i].IconURL,
+					latitude: results[i].Latitude,
+					longitude: results[i].Longitude
+				}
+
+				jsonReply["savedBlips"].push(data);
+			}
 		}
 	}
 
@@ -108,8 +127,16 @@ function reply(results, errorType) {
 	response.write(jsonReply, function (err) { response.end() } );
 }
 
-function getAutoOptionsCallback(results) {
+function getSavedBlipsCallback(results) {
 	reply(results, "OK");
+}
+
+function getAutoOptionsCallback(results) {
+	autoQueryOptionsResults = results;
+
+	let query = savedBlipsQueryStr + clientID + "\"";
+
+	mySQLClient.queryAndCallback(query, getSavedBlipsCallback);
 }
 
 function getPrefsCallback(results) {
