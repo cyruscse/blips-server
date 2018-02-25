@@ -19,6 +19,7 @@ const userClearHistoryQueryStr = "delete from UserPreferences where UID = \"";
 const userChangeAutoOptionsQueryStr = "insert into UserAutoQueryOptions ("
 const userAutoOptionsQueryStr = "select Enabled, TypeGrabLength, OpenNow, Rating, PriceRange from UserAutoQueryOptions where UID = \"";
 const userClearAutoOptionsQueryStr = "delete from UserAutoQueryOptions where UID = \"";
+const blipSaveQueryStr = "insert into UserSavedBlips values (\"";
 
 // Logging Module setup
 const log_file = '/tmp/client_sync.log';
@@ -345,6 +346,23 @@ function updateAutoQueryOptions() {
     mySQLClient.queryAndCallback(queryStr, updateAutoQueryOptionsCallback);
 }
 
+function saveBlipQueryCallback(results) {
+	reply([], "OK");
+}
+
+function saveBlip() {
+	if (!("userID" in clientRequest) || !("blipID" in clientRequest)) {
+		log(logging.warning_level, "Blip save failed (clientRequest: " + clientRequest + ")\n");
+		reply([], "BLIP_SAVE_ARGS_MISSING");
+
+		return;
+	}
+
+	let queryStr = blipSaveQueryStr + clientRequest.userID + "\", \"" + clientRequest.blipID + "\")";
+
+	mySQLClient.queryAndCallback(queryStr, saveBlipQueryCallback);
+}
+
 /**
  * Public facing function for client_sync.
  *
@@ -368,6 +386,8 @@ exports.sync = (httpResponse, jsonRequest) => {
     	deleteUser();
     } else if (jsonRequest.syncType == "updateAutoQueryOptions") {
     	updateAutoQueryOptions();
+    } else if (jsonRequest.syncType == "saveBlip") {
+    	saveBlip();
     } else {
     	reply([], "BAD_REQUEST_TYPE");
 

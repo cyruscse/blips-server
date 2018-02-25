@@ -48,3 +48,9 @@ create table UserAutoQueryOptions
 		OpenNow bool NOT NULL DEFAULT 1,
 		Rating float(2, 1) NOT NULL DEFAULT '0.0',
 		PriceRange int NOT NULL DEFAULT 0);
+
+/* UID -> User ID, key into Users table */
+/* BID -> Blip ID, key into Blips table */
+create table UserSavedBlips
+	(UID varchar(255) PRIMARY KEY,
+		BID char(255) NOT NULL);
