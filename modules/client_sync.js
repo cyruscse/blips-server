@@ -21,7 +21,7 @@ const userAutoOptionsQueryStr = "select Enabled, TypeGrabLength, OpenNow, Rating
 const userClearAutoOptionsQueryStr = "delete from UserAutoQueryOptions where UID = \"";
 const blipSaveQueryStr = "insert into UserSavedBlips values (\"";
 const blipUnsaveQueryStr = "delete from UserSavedBlips where UID = \"";
-const savedBlipsQueryStr = "select Blips.ID, Blips.Name, Blips.Type, Blips.Rating, Blips.Price, Blips.IconURL, Blips.Latitude, Blips.Longitude from Blips inner join UserSavedBlips on Blips.ID = UserSavedBlips.BID where UserSavedBlips.UID = \"";
+const savedBlipsQueryStr = "select Blips.ID, Blips.Name, Blips.Type, Blips.Rating, Blips.Price, Blips.IconURL, Blips.Latitude, Blips.Longitude, LocationCache.city, LocationCache.country from Blips inner join UserSavedBlips on Blips.ID = UserSavedBlips.BID inner join LocationCache on Blip.LCID = LocationCache.ID where UserSavedBlips.UID = \"";
 const clearSavedBlipsQueryStr = "delete from UserSavedBlips where UID = \"";
 
 // Logging Module setup
@@ -112,7 +112,9 @@ function reply(results, errorType) {
 					placeID: results[i].ID,
 					icon: results[i].IconURL,
 					latitude: results[i].Latitude,
-					longitude: results[i].Longitude
+					longitude: results[i].Longitude,
+					city: results[i].city,
+					country: results[i].country
 				}
 
 				jsonReply["savedBlips"].push(data);
