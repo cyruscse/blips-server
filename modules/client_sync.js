@@ -36,21 +36,26 @@ function setModuleTraceLevel (newLevel) {
     module_trace_level = newLevel;
 }
 
-var clientID;
-var clientRequest;
-var response;
-var attractionTypes;
+var clientID = {};
+var clientRequests = {};
+var httpResponses = {};
+var attractionTypes = {};
 
-var userPrefsResults;
-var autoQueryOptionsResults;
+var userPrefsResults = {};
+var autoQueryOptionsResults = {};
 
 /**
  * Form JSON containing list of attraction types to sync to client.
  *
  * There is also a section for attributes, this isn't currently used - but it will be used soon
  */
-function reply(results, errorType) {
+function reply(requestKey, results, errorType) {
 	var jsonReply = {};
+	var clientRequest = clientRequests[requestKey];
+	var httpResponse = httpResponses[requestKey];
+
+	delete clientRequests[requestKey];
+	delete httpResponses[requestKey];
 
 	if (errorType == "OK") {
 		if (clientRequest.syncType == "getattractions") {
@@ -63,42 +68,46 @@ function reply(results, errorType) {
 
 			jsonReply["attraction_types"] = [];
 
-			for (type in attractionTypes) {
-				jsonReply["attraction_types"].push(attractionTypes[type]);
+			let types = attractionTypes[requestKey];
+
+			for (type in attractionTypes[requestKey]) {
+				jsonReply["attraction_types"].push(types[type]);
 			}
+
+			delete attractionTypes[requestKey]
 		}
 		else if (clientRequest.syncType == "login") {
 			jsonReply["userID"] = [];
-			jsonReply["userID"].push(clientID);
+			jsonReply["userID"].push(clientID[requestKey]);
 
 			jsonReply["history"] = [];
 
-			for (i = 0; i < userPrefsResults.length; i++) {
+			for (i = 0; i < userPrefsResults[requestKey].length; i++) {
 				let entry = {};
-				entry[userPrefsResults[i].Name] = userPrefsResults[i].Frequency;
+				entry[userPrefsResults[requestKey][i].Name] = userPrefsResults[requestKey][i].Frequency;
 				jsonReply["history"].push(entry);
 			}
 
 			jsonReply["autoQueryOptions"] = [];
 
 			jsonReply["autoQueryOptions"].push({
-				"enabled": autoQueryOptionsResults[0].Enabled
+				"enabled": autoQueryOptionsResults[requestKey][0].Enabled
 			});
 
 			jsonReply["autoQueryOptions"].push({
-				"typeGrabLength": autoQueryOptionsResults[0].TypeGrabLength
+				"typeGrabLength": autoQueryOptionsResults[requestKey][0].TypeGrabLength
 			});
 
 			jsonReply["autoQueryOptions"].push({
-				"openNow": autoQueryOptionsResults[0].OpenNow
+				"openNow": autoQueryOptionsResults[requestKey][0].OpenNow
 			});
 
 			jsonReply["autoQueryOptions"].push({
-				"rating": autoQueryOptionsResults[0].Rating
+				"rating": autoQueryOptionsResults[requestKey][0].Rating
 			});
 
 			jsonReply["autoQueryOptions"].push({
-				"priceRange": autoQueryOptionsResults[0].PriceRange
+				"priceRange": autoQueryOptionsResults[requestKey][0].PriceRange
 			});
 
 			jsonReply["savedBlips"] = [];
@@ -119,6 +128,9 @@ function reply(results, errorType) {
 
 				jsonReply["savedBlips"].push(data);
 			}
+
+			delete clientID[requestKey];
+			delete autoQueryOptionsResults[requestKey];
 		}
 	}
 
@@ -128,127 +140,134 @@ function reply(results, errorType) {
 	jsonReply = JSON.stringify(jsonReply);
 
 	log(logging.trace_level, "Responding with " + jsonReply);
-	response.write(jsonReply, function (err) { response.end() } );
+	httpResponse.write(jsonReply, function (err) { httpResponse.end() } );
 }
 
-function getSavedBlipsCallback(results) {
-	reply(results, "OK");
+function getSavedBlipsCallback(results, requestKey) {
+	reply(requestKey, results, "OK");
 }
 
-function getAutoOptionsCallback(results) {
-	autoQueryOptionsResults = results;
+function getAutoOptionsCallback(results, requestKey) {
+	autoQueryOptionsResults[requestKey] = results;
 
-	let query = savedBlipsQueryStr + clientID + "\"";
+	let query = savedBlipsQueryStr + clientID[requestKey] + "\"";
 
-	mySQLClient.queryAndCallback(query, getSavedBlipsCallback);
+	mySQLClient.queryAndCallback(query, getSavedBlipsCallback, requestKey);
 }
 
-function getPrefsCallback(results) {
-	userPrefsResults = results;
+function getPrefsCallback(results, requestKey) {
+	userPrefsResults[requestKey] = results;
 
-	let query = userAutoOptionsQueryStr + clientID + "\"";
+	let query = userAutoOptionsQueryStr + clientID[requestKey] + "\"";
 
-	mySQLClient.queryAndCallback(query, getAutoOptionsCallback);
+	mySQLClient.queryAndCallback(query, getAutoOptionsCallback, requestKey);
 }
 
-function getUserPreferences(results) {
-	let query = userPrefQueryStr + clientID + "\"";
+function getUserPreferences(results, requestKey) {
+	let query = userPrefQueryStr + clientID[requestKey] + "\"";
 
-	mySQLClient.queryAndCallback(query, getPrefsCallback);
+	mySQLClient.queryAndCallback(query, getPrefsCallback, requestKey);
 }
 
-function userCreationCallback(results) {
-	clientID = results.insertId;
+function userCreationCallback(results, requestKey) {
+	clientID[requestKey] = results.insertId;
 
-	let query = userChangeAutoOptionsQueryStr + "UID) VALUES (" + clientID + ")";
+	let query = userChangeAutoOptionsQueryStr + "UID) VALUES (" + clientID[requestKey] + ")";
 
-	mySQLClient.queryAndCallback(query, getUserPreferences);
+	mySQLClient.queryAndCallback(query, getUserPreferences, requestKey);
 }
 
-function createNewUser() {
-	if (!("name" in clientRequest) || !("email" in clientRequest)) {
-		log(logging.warning_level, "User creation arguments missing (clientRequest: " + clientRequest + ")\n");
+function createNewUser(requestKey) {
+	if (!("name" in clientRequests[requestKey]) || !("email" in clientRequests[requestKey])) {
+		log(logging.warning_level, "User creation arguments missing (clientRequest: " + clientRequests[requestKey] + ")\n");
 
-		reply([], "USER_CREATE_ARGS_MISSING");
+		reply(requestKey, [], "USER_CREATE_ARGS_MISSING");
+
+		delete clientRequests[requestKey];
 
 		return;
 	}
 
-	let query = userInsertQueryStr + "\"" + clientRequest.name + "\", \"" + clientRequest.email + "\")";
+	let query = userInsertQueryStr + "\"" + clientRequests[requestKey].name + "\", \"" + clientRequests[requestKey].email + "\")";
 
-	mySQLClient.queryAndCallback(query, userCreationCallback);
+	mySQLClient.queryAndCallback(query, userCreationCallback, requestKey);
 }
 
 // Callback for mysql_client. Call reply() with DB results.
-function attractionTypeCallback(results) {
-	attractionTypes = results;
+function attractionTypeCallback(results, requestKey) {
+	attractionTypes[requestKey] = results;
 
-	reply([], "OK");
+	reply(requestKey, [], "OK");
 }
 
-function userQueryCallback(results) {
+function userQueryCallback(results, requestKey) {
 	if (results.length == 0) {
-		createNewUser();
-	}
-	else {
-		clientID = results[0].ID;
-		getUserPreferences();
+		createNewUser(requestKey);
+	} else {
+		clientID[requestKey] = results[0].ID;
+		getUserPreferences([], requestKey);
 	}
 }
 
 // Query DB for AttractionTypes table
-function queryAttractionTypes() {
-	mySQLClient.queryAndCallback(attractionTypeQueryStr, attractionTypeCallback);
+function queryAttractionTypes(requestKey) {
+	mySQLClient.queryAndCallback(attractionTypeQueryStr, attractionTypeCallback, requestKey);
 }
 
-function queryUserExistence() {
-	if (!("email" in clientRequest)) {
-		log(logging.warning_level, "User query arguments missing (clientRequest: " + clientRequest + ")\n");
+function queryUserExistence(requestKey) {
+	if (!("email" in clientRequests[requestKey])) {
+		log(logging.warning_level, "User query arguments missing (clientRequest: " + clientRequests[requestKey] + ")\n");
 
-		reply([], "USER_QUERY_ARGS_MISSING");
+		reply(requestKey, [], "USER_QUERY_ARGS_MISSING");
+
+		delete clientRequests[requestKey];
 
 		return;
 	}
 
-	let query = userIDQueryStr + clientRequest.email + "\"";
+	let query = userIDQueryStr + clientRequests[requestKey].email + "\"";
 
-	mySQLClient.queryAndCallback(query, userQueryCallback);
+	mySQLClient.queryAndCallback(query, userQueryCallback, requestKey);
 }
 
-function clearSavedBlipsCallback(results) {
-	reply([], "OK");
+function clearSavedBlipsCallback(results, requestKey) {
+	reply(requestKey, [], "OK");
 }
 
-function clearAutoOptionsCallback(results) {
-	let query = clearSavedBlipsQueryStr + clientRequest.userID + "\"";
+function clearAutoOptionsCallback(results, requestKey) {
+	let query = clearSavedBlipsQueryStr + clientRequests[requestKey].userID + "\"";
 
-	mySQLClient.queryAndCallback(query, clearSavedBlipsCallback);
+	mySQLClient.queryAndCallback(query, clearSavedBlipsCallback, requestKey);
 }
 
-function clearHistoryCallback(results) {
-	let query = userClearAutoOptionsQueryStr + clientRequest.userID + "\"";
+function clearHistoryCallback(results, requestKey) {
+	let query = userClearAutoOptionsQueryStr + clientRequests[requestKey].userID + "\"";
 
-	mySQLClient.queryAndCallback(query, clearAutoOptionsCallback);
+	mySQLClient.queryAndCallback(query, clearAutoOptionsCallback, requestKey);
 }
 
-function clearUserHistory() {
-	if (!("userID" in clientRequest)) {
-		log(logging.warning_level, "History clear arguments missing (clientRequest: " + clientRequest + ")\n");
+function clearUserHistory(requestKey) {
+	if (!("userID" in clientRequests[requestKey])) {
+		log(logging.warning_level, "History clear arguments missing (clientRequest: " + clientRequests[requestKey] + ")\n");
 
-		reply([], "HIST_CLEAR_ARGS_MISSING");
+		reply(requestKey, [], "HIST_CLEAR_ARGS_MISSING");
+
+		delete clientRequests[requestKey];
 
 		return;
 	}
 
-	let query = userClearHistoryQueryStr + clientRequest.userID + "\"";
+	let query = userClearHistoryQueryStr + clientRequests[requestKey].userID + "\"";
 
-	mySQLClient.queryAndCallback(query, clearHistoryCallback);
+	mySQLClient.queryAndCallback(query, clearHistoryCallback, requestKey);
 }
 
-function setUserHistory() {
-	if (!("history" in clientRequest) || !("userID" in clientRequest)) {
-		log(logging.warning_level, "User merge arguments missing (clientRequest: " + clientRequest + ")\n");
-		reply([], "ATTR_MERGE_ARGS_MISSING");
+function setUserHistory(requestKey) {
+	if (!("history" in clientRequests[requestKey]) || !("userID" in clientRequests[requestKey])) {
+		log(logging.warning_level, "User merge arguments missing (clientRequest: " + clientRequests[requestKey] + ")\n");
+		reply(requestKey, [], "ATTR_MERGE_ARGS_MISSING");
+
+		delete clientRequests[requestKey];
 
 		return;
 	}
@@ -273,36 +292,42 @@ function setUserHistory() {
 	pythonshell.run(attr_replace_script, options, function (error, results) {
 		if (error) {
 			log(logging.warning_level, "Failed to merge user and guest histories (clientRequest: " + clientRequest + ")\n");
-			reply([], "ATTR_MERGE_FAILED");
+			reply(requestKey, [], "ATTR_MERGE_FAILED");
+
+			delete clientRequests[requestKey];
 
 			return;
 		}
 		
-		reply([], "OK");
+		reply(requestKey, [], "OK");
 	});
 }
 
-function deleteUser() {
-	if (!("userID" in clientRequest)) {
-		log(logging.warning_level, "User deletion failed (clientRequest: " + clientRequest + ")\n");
-		reply([], "USER_DELETE_ARGS_MISSING");
+function deleteUser(requestKey) {
+	if (!("userID" in clientRequests[requestKey])) {
+		log(logging.warning_level, "User deletion failed (clientRequest: " + clientRequests[requestKey] + ")\n");
+		reply(requestKey, [], "USER_DELETE_ARGS_MISSING");
+
+		delete clientRequests[requestKey];
 
 		return;
 	}
 
-	let query = userDeleteQueryStr + clientRequest.userID + "\"";
+	let query = userDeleteQueryStr + clientRequests[requestKey].userID + "\"";
 
-	mySQLClient.queryAndCallback(query, clearUserHistory);
+	mySQLClient.queryAndCallback(query, clearUserHistory, requestKey);
 }
 
-function updateAutoQueryOptionsCallback(results) {
-	reply([], "OK");
+function updateAutoQueryOptionsCallback(results, requestKey) {
+	reply(requestKey, [], "OK");
 }
 
-function updateAutoQueryOptions() {
-	if (!("userID" in clientRequest) || !("options" in clientRequest)) {
-		log(logging.warning_level, "User deletion failed (clientRequest: " + clientRequest + ")\n");
-		reply([], "AUTO_QUERY_OPTIONS_ARGS_MISSING");
+function updateAutoQueryOptions(requestKey) {
+	if (!("userID" in clientRequests[requestKey]) || !("options" in clientRequests[requestKey])) {
+		log(logging.warning_level, "User deletion failed (clientRequest: " + clientRequests[requestKey] + ")\n");
+		reply(requestKey, [], "AUTO_QUERY_OPTIONS_ARGS_MISSING");
+
+		delete clientRequests[requestKey];
 
 		return;
 	}
@@ -311,37 +336,37 @@ function updateAutoQueryOptions() {
 	var colVals = new Array();
 
 	columns.push("UID");
-	colVals.push(clientRequest.userID);
+	colVals.push(clientRequests[requestKey].userID);
 
-	for (i = 0; i < clientRequest.options.length; i++) {
-		if (clientRequest.options[i].enabled != undefined) {
+	for (i = 0; i < clientRequests[requestKey].options.length; i++) {
+		if (clientRequests[requestKey].options[i].enabled != undefined) {
 			columns.push("Enabled");
-			colVals.push(clientRequest.options[i].enabled);
+			colVals.push(clientRequests[requestKey].options[i].enabled);
 		}
 
-		if (clientRequest.options[i].typeGrabLength != undefined) {
+		if (clientRequests[requestKey].options[i].typeGrabLength != undefined) {
 			columns.push("TypeGrabLength");
-			colVals.push(clientRequest.options[i].typeGrabLength);
+			colVals.push(clientRequests[requestKey].options[i].typeGrabLength);
 		}
 
-		if (clientRequest.options[i].openNow != undefined) {
+		if (clientRequests[requestKey].options[i].openNow != undefined) {
 			columns.push("OpenNow");
-			colVals.push(clientRequest.options[i].openNow);
+			colVals.push(clientRequests[requestKey].options[i].openNow);
 		}
 
-		if (clientRequest.options[i].rating != undefined) {
+		if (clientRequests[requestKey].options[i].rating != undefined) {
 			columns.push("Rating");
-			colVals.push(clientRequest.options[i].rating);
+			colVals.push(clientRequests[requestKey].options[i].rating);
 		}
 
-		if (clientRequest.options[i].priceRange != undefined) {
+		if (clientRequests[requestKey].options[i].priceRange != undefined) {
 			columns.push("PriceRange");
-			colVals.push(clientRequest.options[i].priceRange);
+			colVals.push(clientRequests[requestKey].options[i].priceRange);
 		}
 	}
 
 	if (columns.length == 0) {
-    	reply([], "BAD_AUTO_QUERY_OPTION");
+    	reply(requestKey, [], "BAD_AUTO_QUERY_OPTION");
 
     	return;
     }
@@ -380,72 +405,79 @@ function updateAutoQueryOptions() {
     	}
     }
 
-    mySQLClient.queryAndCallback(queryStr, updateAutoQueryOptionsCallback);
+    mySQLClient.queryAndCallback(queryStr, updateAutoQueryOptionsCallback, requestKey);
 }
 
-function saveBlipQueryCallback(results) {
-	reply([], "OK");
+function saveBlipQueryCallback(results, requestKey) {
+	reply(requestKey, [], "OK");
 }
 
-function saveBlip() {
-	if (!("userID" in clientRequest) || !("blipID" in clientRequest)) {
-		log(logging.warning_level, "Blip save failed (clientRequest: " + clientRequest + ")\n");
-		reply([], "BLIP_SAVE_ARGS_MISSING");
+function saveBlip(requestKey) {
+	if (!("userID" in clientRequests[requestKey]) || !("blipID" in clientRequests[requestKey])) {
+		log(logging.warning_level, "Blip save failed (clientRequest: " + clientRequests[requestKey] + ")\n");
+		reply(requestKey, [], "BLIP_SAVE_ARGS_MISSING");
+
+		delete clientRequests[requestKey];
 
 		return;
 	}
 
-	let queryStr = blipSaveQueryStr + clientRequest.userID + "\", \"" + clientRequest.blipID + "\")";
+	let queryStr = blipSaveQueryStr + clientRequests[requestKey].userID + "\", \"" + clientRequests[requestKey].blipID + "\")";
 
-	mySQLClient.queryAndCallback(queryStr, saveBlipQueryCallback);
+	mySQLClient.queryAndCallback(queryStr, saveBlipQueryCallback, requestKey);
 }
 
-function unsaveBlipQueryCallback(results) {
-	reply([], "OK");
+function unsaveBlipQueryCallback(results, requestKey) {
+	reply(requestKey, [], "OK");
 }
 
-function unsaveBlip() {
-	if (!("userID" in clientRequest) || !("blipID" in clientRequest)) {
-		log(logging.warning_level, "Blip unsave failed (clientRequest: " + clientRequest + ")\n");
-		reply([], "BLIP_UNSAVE_ARGS_MISSING");
+function unsaveBlip(requestKey) {
+	if (!("userID" in clientRequests[requestKey]) || !("blipID" in clientRequests[requestKey])) {
+		log(logging.warning_level, "Blip unsave failed (clientRequest: " + clientRequests[requestKey] + ")\n");
+		reply(requestKey, [], "BLIP_UNSAVE_ARGS_MISSING");
+
+		delete clientRequests[requestKey];
 
 		return;
 	}
 
-	let queryStr = blipUnsaveQueryStr + clientRequest.userID + "\" and BID=\"" + clientRequest.blipID + "\"";
+	let queryStr = blipUnsaveQueryStr + clientRequests[requestKey].userID + "\" and BID=\"" + clientRequests[requestKey].blipID + "\"";
 
-	mySQLClient.queryAndCallback(queryStr, unsaveBlipQueryCallback);
+	mySQLClient.queryAndCallback(queryStr, unsaveBlipQueryCallback, requestKey);
 }
 
 /**
  * Public facing function for client_sync.
  *
- * Receives httpResponse to send back to client and JSON inputs from client
+ * Receives requestKey to send back to client and JSON inputs from client
  * An example of a client request is available in postexamples/dbsync.json
  **/
 exports.sync = (httpResponse, jsonRequest) => {
 	log(logging.trace_level, "received DBSYNC request");
-	response = httpResponse;
-	clientRequest = jsonRequest;
+
+	let requestKey = Object.keys(clientRequests).length;
+
+	clientRequests[requestKey] = jsonRequest;
+	httpResponses[requestKey] = httpResponse;
 
 	if (jsonRequest.syncType == "getattractions") {
-        queryAttractionTypes();
+        queryAttractionTypes(requestKey);
     } else if (jsonRequest.syncType == "login") {
-        queryUserExistence();
+        queryUserExistence(requestKey);
     } else if (jsonRequest.syncType == "clearHistory") {
-    	clearUserHistory();
+    	clearUserHistory(requestKey);
     } else if (jsonRequest.syncType == "setHistory") {
-    	setUserHistory();
+    	setUserHistory(requestKey);
     } else if (jsonRequest.syncType == "deleteUser") {
-    	deleteUser();
+    	deleteUser(requestKey);
     } else if (jsonRequest.syncType == "updateAutoQueryOptions") {
-    	updateAutoQueryOptions();
+    	updateAutoQueryOptions(requestKey);
     } else if (jsonRequest.syncType == "saveBlip") {
-    	saveBlip();
+    	saveBlip(requestKey);
     } else if (jsonRequest.syncType == "unsaveBlip") {
-    	unsaveBlip();
+    	unsaveBlip(requestKey);
     } else {
-    	reply([], "BAD_REQUEST_TYPE");
+    	reply(requestKey, [], "BAD_REQUEST_TYPE");
 
     	return;
     }

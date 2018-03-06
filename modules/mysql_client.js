@@ -152,7 +152,7 @@ schemaSetup();
  *  that it will call if the SQL query was successful, and optionally, a reference to
  *  a second callback function that can be called later on.
  */
-exports.queryAndCallback = (queryStr, queryCallback) => {
+exports.queryAndCallback = (queryStr, queryCallback, callbackArgs) => {
 	log(logging.trace_level, "queryAndCallback " + queryStr);
 
 	mySQLConnection.query(queryStr, function (error, results, fields) {
@@ -161,7 +161,7 @@ exports.queryAndCallback = (queryStr, queryCallback) => {
 			throw error;
 		}
 
-		queryCallback(results);
+		queryCallback(results, callbackArgs);
 	});
 }
 

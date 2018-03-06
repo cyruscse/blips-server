@@ -212,7 +212,7 @@ function geocodeLatLngCallback (jsonReply) {
  * An example of a client request is available in postexamples/lodgingexample.json
  **/
 exports.query = (httpResponse, jsonRequest) => {
-	log(logging.trace_level, "received QUERY request");
+	log(logging.trace_level, ("received QUERY request %j", jsonRequest));
 	response = httpResponse;
 	clientRequest = jsonRequest;
 	jsonReply = {};
