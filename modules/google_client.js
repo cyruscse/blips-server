@@ -82,11 +82,11 @@ function databaseReadyCallback(emptyDB) {
 mySQLClient.addDBReadyCallback(databaseReadyCallback);
 
 // Queries Google API for city, province, and country name of given latitude and longitude
-exports.geocodeLatLng = (location, callback) => {
+exports.geocodeLatLng = (location, callback, callbackArgs) => {
 	mapsClient.reverseGeocode({ latlng: location }).asPromise()
 		.then ((googleResponse) => {
 			log(logging.trace_level, "geocodeLatLng succeeded");
-			callback(googleResponse.json);
+			callback(googleResponse.json, callbackArgs);
 		})
 		.catch ((err) => {
 			var str = JSON.stringify(err.json);
