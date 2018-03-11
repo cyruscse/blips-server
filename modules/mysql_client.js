@@ -49,6 +49,20 @@ var db_config = {
 
 var mySQLConnection;
 
+function selectDatabase() {
+	mySQLConnection.query(blipsDbExistsQuery, function (error, results, fields) {
+		if (error) {
+			log(logging.critical_level, "DB schema missing, rebuilding basic DB");
+
+			buildSchema();
+			return;
+		}
+
+		log(logging.warning_level, "DB Schema exists, not rebuilding");
+		notifyReadyListeners(false);
+	});
+}
+
 /**
  * Handle initial DB connection and any subsequent DB connections.
  * Called when server initializes, and if the DB drops the connection.
@@ -70,6 +84,8 @@ function handleDisconnect() {
 			throw err;
 		}
 	});
+
+	selectDatabase();
 }
 
 /**
@@ -112,17 +128,7 @@ function schemaSetup() {
 			});
 		}
 		else {
-			mySQLConnection.query(blipsDbExistsQuery, function (error, results, fields) {
-				if (error) {
-					log(logging.critical_level, "DB schema missing, rebuilding basic DB");
-
-					buildSchema();
-					return;
-				}
-
-				log(logging.warning_level, "DB Schema exists, not rebuilding");
-				notifyReadyListeners(false);
-			});
+			selectDatabase();
 		}
 	});
 }
