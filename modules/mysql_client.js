@@ -18,7 +18,7 @@ const force_rebuild = "dbsetup/force_rebuild";
 const lastModTimeQuery = "select * from ";
 const unixTimestampQuery = "select UNIX_TIMESTAMP ";
 const tableRowCountQuery = "select count(*) from Blips ";
-const blipsDbExistsQuery = "use blips"
+const blipsDbExistsQuery = "use blips";
 const dropDBQuery = "drop database blips";
 
 /*****************************************************
@@ -44,8 +44,7 @@ var databaseReadyCallbacks = [];
 var db_config = {
     host      : hostname,
     user      : dbuser,
-    password  : dbpass,
-    database  : dbname
+    password  : dbpass
 };
 
 var mySQLConnection;
@@ -81,9 +80,7 @@ function buildSchema() {
 	sqlSchema = fs.readFileSync(table_definitions, "utf-8").split(";");
 
 	for (index = 0; index < (sqlSchema.length - 1); index++) {
-		sqlSchema[index] = sqlSchema[index].replace("\n", "").replace("\t", "");
-
-		queryStr = mySQLConnection.escape(sqlSchema[index]);
+		sqlSchema[index] = sqlSchema[index].replace(new RegExp("\n", 'g'), "").replace(new RegExp("\t", 'g'), "");
 
 		mySQLConnection.query(sqlSchema[index], function (error, results, fields) {
 			if (error) {
