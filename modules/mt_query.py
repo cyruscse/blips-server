@@ -81,6 +81,8 @@ def calculateNewLocation(old_lat, old_lng, dx, dy):
 	return new_location
 
 def parseAttraction(attraction, lc_id, result):
+	global city
+
 	row = []
 
 	name = result["name"].encode('ascii', 'ignore').decode('ascii').strip()
@@ -114,7 +116,7 @@ def parseAttraction(attraction, lc_id, result):
 	row.append(result["geometry"]["location"]["lng"])
 
 	if attraction == "point_of_interest":
-		row.append(wikipedia.summary(name).encode('ascii', 'ignore').decode('ascii').strip())
+		row.append(wikipedia.summary(name + ' ' + city).encode('ascii', 'ignore').decode('ascii').strip())
 	else:
 		row.append("")
 
