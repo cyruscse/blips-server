@@ -116,7 +116,11 @@ def parseAttraction(attraction, lc_id, result):
 	row.append(result["geometry"]["location"]["lng"])
 
 	if attraction == "point_of_interest":
-		row.append(wikipedia.summary(name + ' ' + city).encode('ascii', 'ignore').decode('ascii').strip())
+		try:
+			row.append(wikipedia.summary(name + ' ' + city).encode('ascii', 'ignore').decode('ascii').strip())
+		except:
+			# Don't insert a description if we can't find one
+			row.append("")
 	else:
 		row.append("")
 
@@ -154,7 +158,7 @@ def initQueryPlaces(attraction, lc_id):
 		global city
 		query = city + point_of_interest_query
 
-		results = gmaps.places(query = query)
+		results = gmaps.places(query = query, language = 'en')
 
 		poi_pool = ThreadPool(len(results["results"]))
 		to_insert = poi_pool.map(f, results["results"])

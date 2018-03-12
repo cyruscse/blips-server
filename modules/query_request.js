@@ -168,15 +168,15 @@ function geocodeLatLngCallback (jsonReply, requestKey) {
 
 		if (geocodeTypes.includes(geocodeFilter)) {
 			if (geocodeTypes.includes(geocodeCityFilter)) {
-				city = addressComp.long_name;
+				city = addressComp.long_name.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
 			}
 
 			if (geocodeTypes.includes(geocodeStateFilter)) {
-				state = addressComp.long_name;
+				state = addressComp.long_name.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
 			}
 
 			if (geocodeTypes.includes(geocodeCountryFilter)) {
-				country = addressComp.long_name;
+				country = addressComp.long_name.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
 			}
 		}
 	}
