@@ -6,6 +6,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 import googlemaps
 import pymysql
+import wikipedia
 import sys
 import math
 import time
@@ -20,7 +21,7 @@ location_cache_query_id = "select ID from LocationCache where "
 location_cache_insert = "insert into LocationCache values ("
 location_cache_update = "update LocationCache set CachedTime = (now()) where Type = \""
 blip_cache_clear = "delete from Blips where LCID = \""
-blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Rating, Price, IconURL, Latitude, Longitude ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Rating, Price, IconURL, Latitude, Longitude, Description ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
 blip_existence = "select count(*) from Blips where LCID = \""
 unix_timestamp_query = "select UNIX_TIMESTAMP (\'"
 user_preference_update = "insert into UserPreferences (UID, AID, Frequency) select (\""
@@ -79,7 +80,7 @@ def calculateNewLocation(old_lat, old_lng, dx, dy):
 
 	return new_location
 
-def parseAttraction(result, attraction, lc_id):
+def parseAttraction(attraction, lc_id, result):
 	row = []
 
 	name = result["name"].encode('ascii', 'ignore').decode('ascii').strip()
@@ -112,6 +113,11 @@ def parseAttraction(result, attraction, lc_id):
 	row.append(result["geometry"]["location"]["lat"])
 	row.append(result["geometry"]["location"]["lng"])
 
+	if attraction == "point_of_interest":
+		row.append(wikipedia.summary(name).encode('ascii', 'ignore').decode('ascii').strip())
+	else:
+		row.append("")
+
 	return row
 
 # Given an attraction type, LocationCache ID, and cell, query Google for a list of attractions (matching the passed attraction type)
@@ -131,32 +137,36 @@ def queryPlaces(attraction, lc_id, cell):
 		return
 
 	for result in places["results"]:
-		to_insert.append(parseAttraction(result, attraction, lc_id))
+		to_insert.append(parseAttraction(attraction, lc_id, result))
 
 	return to_insert
 
 # Given an attraction type to query, spawn a thread for each cell of the current city and query Google for the
 # current attraction type once for each thread. This can't be done in one query as the Google API call can only return 20 attractions at once.
 def initQueryPlaces(attraction, lc_id):
-	# ThreadPool.map only allows one argument for each thread, so we can't pass attraction type, lcID, and the current cell
-	# Instead we can use lambdas to partially setup the call to queryPlaces, setting up the attraction type and cell, allowing map to call with the current cell
-	f = lambda attr: lambda lcid: lambda loc: queryPlaces(attraction, lc_id, loc)
-	f = f(attraction)
-	f = f(lc_id)
-
 	if attraction == "point_of_interest":
+		f = lambda attr: lambda lcid: lambda result: parseAttraction(attraction, lc_id, result)
+		f = f(attraction)
+		f = f(lc_id)
+
 		global city
 		query = city + point_of_interest_query
 
 		results = gmaps.places(query = query)
 
-		to_insert = []
-
-		for result in results["results"]:
-			to_insert.append(parseAttraction(result, attraction, lc_id))
+		poi_pool = ThreadPool(len(results["results"]))
+		to_insert = poi_pool.map(f, results["results"])
+		poi_pool.close()
+		poi_pool.join()
 
 		return to_insert
 	else:
+		# ThreadPool.map only allows one argument for each thread, so we can't pass attraction type, lcID, and the current cell
+		# Instead we can use lambdas to partially setup the call to queryPlaces, setting up the attraction type and cell, allowing map to call with the current cell
+		f = lambda attr: lambda lcid: lambda loc: queryPlaces(attraction, lc_id, loc)
+		f = f(attraction)
+		f = f(lc_id)
+
 		# List that will be populated with results of queries for each cell
 		combined_to_insert = []
 

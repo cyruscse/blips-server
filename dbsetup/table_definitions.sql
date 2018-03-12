@@ -30,6 +30,7 @@ create table Blips
 		IconURL char(100) NOT NULL,
 		Latitude float(10, 7) NOT NULL,
 		Longitude float(10, 7) NOT NULL,
+		Description text,
 		PRIMARY KEY (ID, LCID));
 
 create table Users
