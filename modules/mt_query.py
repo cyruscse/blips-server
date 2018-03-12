@@ -24,6 +24,7 @@ blip_bulk_insert = "insert ignore into Blips ( ID, LCID, Type, Name, Rating, Pri
 blip_existence = "select count(*) from Blips where LCID = \""
 unix_timestamp_query = "select UNIX_TIMESTAMP (\'"
 user_preference_update = "insert into UserPreferences (UID, AID, Frequency) select (\""
+point_of_interest_query = "+point+of+interest"
 
 # Global DB variables
 db_address = ""
@@ -78,10 +79,45 @@ def calculateNewLocation(old_lat, old_lng, dx, dy):
 
 	return new_location
 
+def parseAttraction(result, attraction, lc_id):
+	row = []
+
+	name = result["name"].encode('ascii', 'ignore').decode('ascii').strip()
+
+	row.append(result["place_id"])
+	row.append(lc_id)
+	row.append(attraction)
+	row.append(name)
+
+	# The rating and price_level tags aren't always included
+	# (usually in newer entries), check to see if this attraction
+	# has it, otherwise we crash.
+	if "rating" in result:
+		row.append(result["rating"])
+	else:
+		row.append("0")
+
+	# Google doesn't have price levels for every attraction.
+	if "price_level" in result:
+		row.append(result["price_level"])
+	else:
+		row.append("0")
+
+	if "icon" in result:
+		icon_url = result["icon"]
+		row.append(os.path.basename(icon_url))
+	else:
+		row.append("0")
+
+	row.append(result["geometry"]["location"]["lat"])
+	row.append(result["geometry"]["location"]["lng"])
+
+	return row
+
 # Given an attraction type, LocationCache ID, and cell, query Google for a list of attractions (matching the passed attraction type)
 # within the cell. Return the compiled list.
 def queryPlaces(attraction, lc_id, cell):
-	places = gmaps.places_nearby(cell, radius = cell_radius, open_now = True, type = attraction) # need to hook up open_now
+	places = gmaps.places_nearby(cell, radius = cell_radius, type = attraction)
 
 	to_insert = []
 	file = '/tmp/mt_' + str(attraction) + '.log'
@@ -95,39 +131,7 @@ def queryPlaces(attraction, lc_id, cell):
 		return
 
 	for result in places["results"]:
-		row = []
-
-		name = result["name"].encode('ascii', 'ignore').decode('ascii').strip()
-
-		row.append(result["place_id"])
-		row.append(lc_id)
-		row.append(attraction)
-		row.append(name)
-
-		# The rating and price_level tags aren't always included
-		# (usually in newer entries), check to see if this attraction
-		# has it, otherwise we crash.
-		if "rating" in result:
-			row.append(result["rating"])
-		else:
-			row.append("0")
-
-		# Google doesn't have price levels for every attraction.
-		if "price_level" in result:
-			row.append(result["price_level"])
-		else:
-			row.append("0")
-
-		if "icon" in result:
-			icon_url = result["icon"]
-			row.append(os.path.basename(icon_url))
-		else:
-			row.append("0")
-
-		row.append(result["geometry"]["location"]["lat"])
-		row.append(result["geometry"]["location"]["lng"])
-
-		to_insert.append(row)
+		to_insert.append(parseAttraction(result, attraction, lc_id))
 
 	return to_insert
 
@@ -140,24 +144,37 @@ def initQueryPlaces(attraction, lc_id):
 	f = f(attraction)
 	f = f(lc_id)
 
-	# List that will be populated with results of queries for each cell
-	combined_to_insert = []
+	if attraction == "point_of_interest":
+		global city
+		query = city + point_of_interest_query
 
-	# Spawn a thread for each cell in the matrix
-	pool = ThreadPool(len(cells))
-	results = pool.map(f, cells)
-	pool.close()
-	pool.join()
+		results = gmaps.places(query = query)
 
-	# This code is executed once all cell thread's for an attraction type are complete.
-	# results contains a 2D array, with the first dimension corresponding to each cell, and the second dimension
-	# containg the blips returned for that cell. We need to join all the blip array together so we can bulk insert into the DB
-	for cell in results:
-		if cell is not None:
-			for blip in cell:
-				combined_to_insert.append(blip)
+		to_insert = []
 
-	return combined_to_insert
+		for result in results["results"]:
+			to_insert.append(parseAttraction(result, attraction, lc_id))
+
+		return to_insert
+	else:
+		# List that will be populated with results of queries for each cell
+		combined_to_insert = []
+
+		# Spawn a thread for each cell in the matrix
+		pool = ThreadPool(len(cells))
+		results = pool.map(f, cells)
+		pool.close()
+		pool.join()
+
+		# This code is executed once all cell thread's for an attraction type are complete.
+		# results contains a 2D array, with the first dimension corresponding to each cell, and the second dimension
+		# containg the blips returned for that cell. We need to join all the blip array together so we can bulk insert into the DB
+		for cell in results:
+			if cell is not None:
+				for blip in cell:
+					combined_to_insert.append(blip)
+
+		return combined_to_insert
 
 # Given a previously unqueried attraction type and city, insert a row to the LocationCache table with the current time to start the caching process
 # Once the row is inserted, query the DB for the generated unique ID for the new LocationCache row, then call initQueryPlaces with this ID and attraction type to query Google

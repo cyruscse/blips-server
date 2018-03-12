@@ -60,6 +60,14 @@ function databaseReadyCallback(emptyDB) {
 		var toInsert = new Array();
 		var types = new Array();
 
+		var poiRow = new Array();
+
+		poiRow.push("NULL");
+		poiRow.push("point_of_interest");
+		poiRow.push("Point of Interest");
+
+		toInsert.push(poiRow);
+
 		placeTypes.map(type => types.push(type));
 
 		for (index in types) {
