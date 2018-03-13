@@ -21,7 +21,7 @@ const userAutoOptionsQueryStr = "select Enabled, TypeGrabLength, OpenNow, Rating
 const userClearAutoOptionsQueryStr = "delete from UserAutoQueryOptions where UID = \"";
 const blipSaveQueryStr = "insert into UserSavedBlips values (\"";
 const blipUnsaveQueryStr = "delete from UserSavedBlips where UID = \"";
-const savedBlipsQueryStr = "select Blips.ID, Blips.Name, AttractionTypes.ProperName, Blips.Rating, Blips.Price, Blips.IconURL, Blips.Latitude, Blips.Longitude, LocationCache.city, LocationCache.country from Blips inner join UserSavedBlips on Blips.ID = UserSavedBlips.BID inner join LocationCache on Blips.LCID = LocationCache.ID inner join AttractionTypes on Blips.Type = AttractionTypes.Name where UserSavedBlips.UID = \"";
+const savedBlipsQueryStr = "select Blips.ID, Blips.Name, AttractionTypes.ProperName, Blips.Rating, Blips.Price, Blips.IconURL, Blips.Latitude, Blips.Longitude, LocationCache.city, LocationCache.country, Blips.Description from Blips inner join UserSavedBlips on Blips.ID = UserSavedBlips.BID inner join LocationCache on Blips.LCID = LocationCache.ID inner join AttractionTypes on Blips.Type = AttractionTypes.Name where UserSavedBlips.UID = \"";
 const clearSavedBlipsQueryStr = "delete from UserSavedBlips where UID = \"";
 
 // Logging Module setup
@@ -115,7 +115,7 @@ function reply(requestKey, results, errorType) {
 			for (i = 0; i < results.length; i++) {
 				let data = {
 					name: results[i].Name,
-					type: results[i].Type,
+					type: results[i].ProperName,
 					rating: results[i].Rating,
 					price: results[i].Price,
 					placeID: results[i].ID,
@@ -123,7 +123,8 @@ function reply(requestKey, results, errorType) {
 					latitude: results[i].Latitude,
 					longitude: results[i].Longitude,
 					city: results[i].city,
-					country: results[i].country
+					country: results[i].country,
+					description: results[i].Description
 				}
 
 				jsonReply["savedBlips"].push(data);
