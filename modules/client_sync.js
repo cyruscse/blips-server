@@ -273,11 +273,11 @@ function setUserHistory(requestKey) {
 		return;
 	}
 
-	let historyStr = clientRequest.history.replace("[", "{").replace("]", "}");
+	let historyStr = clientRequests[requestKey].history.replace("[", "{").replace("]", "}");
 	let historyDict = JSON.parse(historyStr);
 
 	var queryArgs = mySQLClient.getDBDetails();
-	queryArgs.push(clientRequest.userID);
+	queryArgs.push(clientRequests[requestKey].userID);
 
 	for (entry in historyDict) {
 		queryArgs.push(entry);
@@ -292,7 +292,7 @@ function setUserHistory(requestKey) {
 
 	pythonshell.run(attr_replace_script, options, function (error, results) {
 		if (error) {
-			log(logging.warning_level, "Failed to merge user and guest histories (clientRequest: " + clientRequest + ")\n");
+			log(logging.warning_level, "Failed to merge user and guest histories (clientRequest: " + clientRequests[requestKey] + ")\n");
 			reply(requestKey, [], "ATTR_MERGE_FAILED");
 
 			delete clientRequests[requestKey];
