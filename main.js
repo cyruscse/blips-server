@@ -1,4 +1,8 @@
 /**
+ * Blips MAIN
+ * Cyrus Sadeghi
+ * September 2017 - April 2018
+ *
  * Create HTTP server, and receive JSON inputs from clients.
  *
  * Determine which module should handle the request and hand off all responsibility to
@@ -15,8 +19,6 @@ const mySQLClient = require('./modules/mysql_client.js');
 const logging = require('./modules/logging.js');
 const clientSync = require('./modules/client_sync.js');
 const queryRequest = require('./modules/query_request.js');
-
-const oneDayInSeconds = 86400;
 
 // Response that goes back to POSTing client
 var httpResponse;

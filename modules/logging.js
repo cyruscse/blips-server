@@ -1,3 +1,11 @@
+/**
+ * LOGGING
+ * Cyrus Sadeghi
+ * November 2017
+ *
+ * Basic universal logging method for all other modules
+ */
+
 const fs = require('fs');
 
 // Logging verbosity levels, by default most modules should have this set to warning_level

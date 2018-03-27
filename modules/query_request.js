@@ -1,6 +1,11 @@
 /**
+ * QUERY_REQUEST
+ * Cyrus Sadeghi
+ * October 2017 - April 2018
+ *
  * Handle client query requests. Given the user's location, attraction type,
  * and requested radius, form a JSON response containing a list of attractions near the client.
+ * Actual attraction querying has been moved to a multithreaded Python implemenation (mt_query.py)
  * Attractions are cached in the DB, and cache entries are considered stale after 24 hours.
  */
 

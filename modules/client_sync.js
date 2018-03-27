@@ -1,6 +1,11 @@
 /**
+ * CLIENT_SYNC
+ * Cyrus Sadeghi
+ * November 2017 - February 2018
+ *
  * Handle client sync requests. Form a JSON response containing a list of supported attraction types.
  * This will be extended later to include other client-required information.
+ * This module is very ugly, it had lots of responsiblities added on towards the end of the project
  */
 
 const mySQLClient = require('./mysql_client.js');

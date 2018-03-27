@@ -1,3 +1,11 @@
+/**
+ * GOOGLE_CLIENT
+ * Cyrus Sadeghi
+ * October - December 2017
+ *
+ * Handles interaction with Google's Node API
+ */
+
 const fs = require('fs');
 const maps = require('@google/maps');
 const Promise = require('promise');
@@ -11,11 +19,11 @@ const attrTypeBulkInsertQueryStr = "insert into AttractionTypes values ?";
 
 // Google API key for Blips
 var mapsClient = maps.createClient({
-	key       : 'AIzaSyB0oGuvJF0foOJxAwSj_pxlsLJdijmsoFw',
+	// key       : '',	KEY REMOVED, either add your own key or preferrably, change this implementation to not include the key in the repository
     Promise   : Promise
 });
 
-const clientKey = 'AIzaSyB9_LQ5Osmo-XNjAMMqfNwc4qG_mEyXZ3Q';
+//const clientKey = 'AIzaSyB9_LQ5Osmo-XNjAMMqfNwc4qG_mEyXZ3Q';	KEY REMOVED, either add your own key or preferrably, change this implementation to not include the key in the repository
 
 // Logging Module setup
 const log_file = '/tmp/google_client.log';

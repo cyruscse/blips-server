@@ -1,11 +1,19 @@
+/**
+ * MYSQL_CLIENT
+ * Cyrus Sadeghi
+ * September - December 2017
+ *
+ * Handles interaction with MySQL database hosted by AWS
+ */
+
 const mysql = require('mysql');
 const fs = require('fs');
 const logging = require('./logging.js');
 
 // AWS RDS MySQL server settings
 // Can't just store DB username, url, password, etc. here (or we can justify leaving it here by documenting that
-// DB server is accessible only from AWS ELB instance)
-const hostname = 'aa5icva8ezh544.crnuwmhdforv.us-east-2.rds.amazonaws.com';
+// DB server is accessible only from AWS ELB instance) FUTURE PROJECTS SHOULD NOT INCLUDE THE PASSWORD HERE!!!!
+// const hostname = 'aa5icva8ezh544.crnuwmhdforv.us-east-2.rds.amazonaws.com';	- This has been shutdown as of April 2018, you need to provision a new RDS instance
 const dbuser = 'blips';
 const dbpass = 'passpass';
 const dbname = 'blips';

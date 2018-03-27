@@ -1,10 +1,23 @@
 # blips-server
+# Originally written by Cyrus Sadeghi
 Fourth Year Project - Blips server component
+
+## NOTE regarding status after 2017-2018 academic year
+All AWS services (ELB, RDS, etc.) have been shutdown now that our project is complete.
+We made the mistake of keeping Google API keys in the code (very bad idea), and have revoked
+these keys remotely.
+
+If you want to redeploy this server application, you need to provision Amazon ELB (Elastic Beanstalk) and RDS (Relational Database Service),
+acquire Google API keys for the server and client and update those values in the code.
+
+## End note
 
 blips-ios-client located at https://github.com/cyruscse/blips-iOS-client
 blips-android-client located at https://github.com/cyruscse/blips-android-client
-blips server AWS logging forwards to blipsserverlogs@gmail.com (need to add password here)
+~~blips server AWS logging forwards to blipsserverlogs@gmail.com~~ (AWS services have been shut down)
 
+
+## These descriptions are out of date, they were written in an earlier stage of the project
 Directory Structure & Contents
 
 Root
@@ -48,5 +61,5 @@ AWS Useful Tools
 - eb status
 
 Important Commands
-- curl --request POST --data-binary "@postexamples/ottlodging.json" http://blipsserver-env.us-east-2.elasticbeanstalk.com/ (curl POST a file to server)
+- ~~curl --request POST --data-binary "@postexamples/ottlodging.json" http://blipsserver-env.us-east-2.elasticbeanstalk.com/ (curl POST a file to server)~~ (URL is dead after AWS shutdown)
 - zip -ur build/blips.zip . (package ELB deployment)

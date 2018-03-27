@@ -1,5 +1,5 @@
 # mt_query.py
-# Cyrus Sadeghi - January 2018
+# Cyrus Sadeghi - January - April 2018
 # Multithreaded implementation of Blip querying
 
 from multiprocessing.dummy import Pool as ThreadPool
@@ -13,7 +13,7 @@ import time
 import os.path
 
 # Initialize Google API, using our API key
-gmaps = googlemaps.Client(key = 'AIzaSyB0oGuvJF0foOJxAwSj_pxlsLJdijmsoFw')
+# gmaps = googlemaps.Client(key = 'AIzaSyB0oGuvJF0foOJxAwSj_pxlsLJdijmsoFw')	KEY REMOVED, either add your own key or preferrably, change this implementation to not include the key in the repository
 
 # SQL queries used throughout all methods
 location_cache_query = "select CachedTime, ID from LocationCache where "
